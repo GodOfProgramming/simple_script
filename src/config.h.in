@@ -1,0 +1,2 @@
+#define SimpleScript_VERSION_MAJOR @SimpleScript_VERSION_MAJOR@
+#define SimpleScript_VERSION_MINOR @SimpleScript_VERSION_MINOR@
