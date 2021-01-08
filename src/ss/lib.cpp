@@ -16,9 +16,10 @@ namespace ss
   {
     Chunk chunk;
     chunk.write_constant(Value(1), 1);
+    chunk.write(Instruction{OpCode::NEGATE}, 1);
     chunk.write_constant(Value("some string"), 1);
     chunk.write(Instruction{OpCode::RETURN}, 2);
-    this->disassemble_chunk("TEST", chunk);
+    this->interpret(chunk);
   }
 
   void VM::run()
@@ -32,12 +33,7 @@ namespace ss
         case OpCode::NO_OP:
           break;
         case OpCode::CONSTANT: {
-          if (++this->ip < this->chunk->code.end()) {
-            Value constant = this->chunk->constant_at(this->ip->modifying_bits);
-            this->chunk->push_stack(constant);
-          } else {
-            THROW_RUNTIME_ERROR("no value following constant opcode");
-          }
+          this->chunk->push_stack(this->chunk->constant_at(this->ip->modifying_bits));
         } break;
         case OpCode::NEGATE: {
           this->chunk->push_stack(-this->chunk->pop_stack());
