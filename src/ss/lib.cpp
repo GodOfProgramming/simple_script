@@ -15,9 +15,9 @@ namespace ss
   void VM::test()
   {
     Chunk chunk;
-    chunk.write_constant(Value(1));
-    chunk.write_constant(Value("some string"));
-    chunk.write(Instruction{OpCode::RETURN});
+    chunk.write_constant(Value(1), 1);
+    chunk.write_constant(Value("some string"), 1);
+    chunk.write(Instruction{OpCode::RETURN}, 2);
     this->disassemble_chunk("TEST", chunk);
   }
 
@@ -29,6 +29,8 @@ namespace ss
         this->disassemble_instruction(*this->chunk, *this->ip, this->ip - this->chunk->code.begin());
       }
       switch (static_cast<OpCode>(this->ip->major_opcode)) {
+        case OpCode::NO_OP:
+          break;
         case OpCode::CONSTANT: {
           if (++this->ip < this->chunk->code.end()) {
             Value constant = this->chunk->constant_at(this->ip->modifying_bits);
@@ -77,6 +79,12 @@ namespace ss
   void VM::disassemble_instruction(Chunk& chunk, Instruction i, std::size_t offset) const noexcept
   {
     printf("%04lu ", offset);
+
+    if (offset > 0 && chunk.line_at(offset) == chunk.line_at(offset - 1)) {
+      printf("   | ");
+    } else {
+      printf("%04lu ", chunk.line_at(offset));
+    }
 
     switch (i.major_opcode) {
       case OpCode::NO_OP: {
