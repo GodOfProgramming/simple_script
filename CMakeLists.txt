@@ -24,7 +24,9 @@ add_executable(${EXE} "${SRC}/main.cpp")
 add_executable(${EXE_TEST} "${SRC}/main.test.cpp")
 
 target_link_libraries(${EXE} pthread)
-target_link_libraries(${EXE_TEST} ${GTEST_LIBRARIES} pthread)
+target_link_libraries(${EXE_TEST} ${GTEST_LIBRARIES} gcov pthread)
+
+target_compile_options(${EXE_TEST} PUBLIC -g -O0 --coverage -fprofile-arcs -ftest-coverage)
 
 # ss
 
