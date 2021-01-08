@@ -31,14 +31,20 @@ namespace ss
   auto Value::to_string() const -> std::string
   {
     switch (this->type()) {
+      case Type::Nil: {
+        return std::string("nil");
+      }
       case Type::Number: {
-        return std::to_string(std::get<NumberType>(this->value));
-      } break;
+        std::stringstream ss;
+        ss << std::get<NumberType>(this->value);
+        return ss.str();
+      }
       case Type::String: {
         return std::get<StringType>(this->value);
-      } break;
+      }
       default: {
-        THROW_RUNTIME_ERROR("this should not be possible");
+        // virtually impossible to get here, unable to test
+        THROW_RUNTIME_ERROR("tried converting invalid type to string");
       }
     }
   }
@@ -48,10 +54,10 @@ namespace ss
     switch (this->type()) {
       case Type::Number: {
         return Value(-std::get<NumberType>(this->value));
-      } break;
+      }
       default: {
         THROW_RUNTIME_ERROR("negation on invalid type");
-      } break;
+      }
     }
   }
 
@@ -64,18 +70,18 @@ namespace ss
           case Type::Number: {
             auto b = std::get<NumberType>(other.value);
             return Value(a + b);
-          } break;
+          }
           case Type::String: {
             auto              b = std::get<StringType>(other.value);
             std::stringstream ss;
             ss << a << b;
             return Value(ss.str());
-          } break;
+          }
           default: {
             THROW_RUNTIME_ERROR("unable to add invalid types");
           }
         }
-      } break;
+      }
       case Type::String: {
         auto a = std::get<StringType>(this->value);
         switch (other.type()) {
@@ -84,24 +90,22 @@ namespace ss
             std::stringstream ss;
             ss << a << b;
             return Value(ss.str());
-          } break;
+          }
           case Type::String: {
             auto              b = std::get<StringType>(other.value);
             std::stringstream ss;
             ss << a << b;
             return Value(ss.str());
-          } break;
+          }
           default: {
             THROW_RUNTIME_ERROR("unable to add invalid types");
           }
         }
-      } break;
+      }
       default: {
         THROW_RUNTIME_ERROR("unable to add invalid types");
       }
     }
-
-    return Value();
   }
 
   auto Value::operator-(const Value& other) const -> Value
@@ -113,12 +117,12 @@ namespace ss
           case Type::Number: {
             auto b = std::get<NumberType>(other.value);
             return Value(a - b);
-          } break;
+          }
           default: {
             THROW_RUNTIME_ERROR("unable to sub invalid types");
           }
         }
-      } break;
+      }
       default: {
         THROW_RUNTIME_ERROR("unable to sub invalid types");
       }
@@ -134,7 +138,7 @@ namespace ss
           case Type::Number: {
             auto b = std::get<NumberType>(other.value);
             return Value(a * b);
-          } break;
+          }
           case Type::String: {
             auto              b = std::get<StringType>(other.value);
             std::stringstream ss;
@@ -142,12 +146,12 @@ namespace ss
               ss << b;
             }
             return Value(ss.str());
-          } break;
+          }
           default: {
             THROW_RUNTIME_ERROR("unable to mul invalid types");
           }
         }
-      } break;
+      }
       case Type::String: {
         auto a = std::get<StringType>(this->value);
         switch (other.type()) {
@@ -158,17 +162,16 @@ namespace ss
               ss << a;
             }
             return Value(ss.str());
-          } break;
+          }
           default: {
             THROW_RUNTIME_ERROR("unable to mul invalid types");
           }
         }
-      } break;
+      }
       default: {
         THROW_RUNTIME_ERROR("unable to mul invalid types");
       }
     }
-    return Value();
   }
 
   auto Value::operator/(const Value& other) const -> Value
@@ -180,12 +183,12 @@ namespace ss
           case Type::Number: {
             auto b = std::get<NumberType>(other.value);
             return Value(a / b);
-          } break;
+          }
           default: {
             THROW_RUNTIME_ERROR("unable to div invalid types");
           }
         }
-      } break;
+      }
       default: {
         THROW_RUNTIME_ERROR("unable to div invalid types");
       }
