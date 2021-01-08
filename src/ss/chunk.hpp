@@ -1,17 +1,11 @@
 #pragma once
 
 #include "datatypes.hpp"
-#include "util.hpp"
+#include "code.hpp"
 #include <vector>
 
 namespace ss
 {
-  struct Instruction
-  {
-    OpCode      major_opcode   = OpCode::NO_OP;
-    std::size_t modifying_bits = 0;
-  };
-
   class Chunk
   {
    public:

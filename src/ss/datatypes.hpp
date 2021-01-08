@@ -9,31 +9,41 @@ namespace ss
   {
     enum class Type
     {
+      Nil,
       Number,
       String,
     };
 
    public:
+    using NilType    = void*;
     using NumberType = double;
     using StringType = std::string;
 
+    Value();
     Value(double v);
     Value(std::string v);
 
-    auto number() -> NumberType*;
-    auto string() -> StringType*;
+    auto type() const noexcept -> Type;
+    auto is_type(Type t) const noexcept -> bool;
+
+    auto number() const -> NumberType;
+    auto string() const -> StringType;
 
     auto to_string() const -> std::string;
 
-    auto operator-() -> Value;
+    auto operator-() const -> Value;
 
-    auto operator=(NumberType v) -> Value&;
-    auto operator=(StringType v) -> Value&;
+    auto operator+(const Value& other) const -> Value;
+    auto operator-(const Value& other) const -> Value;
+    auto operator*(const Value& other) const -> Value;
+    auto operator/(const Value& other) const -> Value;
+
+    auto operator=(NumberType v) noexcept -> Value&;
+    auto operator=(StringType v) noexcept -> Value&;
+
+    auto operator==(const Value& other) const noexcept -> bool;
 
    private:
-    using Container = std::variant<NumberType, StringType>;
-
-    Type      datatype;
-    Container value;
+    std::variant<NilType, NumberType, StringType> value;
   };
 }  // namespace ss

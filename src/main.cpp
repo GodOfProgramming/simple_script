@@ -1,4 +1,3 @@
-#include "src/config.h"
 #include "ss/lib.hpp"
 
 int main()

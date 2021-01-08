@@ -2,7 +2,7 @@
 
 #include "datatypes.hpp"
 #include "chunk.hpp"
-#include "util.hpp"
+#include "code.hpp"
 #include <cinttypes>
 
 namespace ss

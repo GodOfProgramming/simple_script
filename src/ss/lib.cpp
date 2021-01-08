@@ -8,16 +8,19 @@
 namespace
 {
   constexpr bool SHOW_DISASSEMBLY = true;
-}
+  constexpr bool PRINT_STACK      = true;
+}  // namespace
 
 namespace ss
 {
   void VM::test()
   {
     Chunk chunk;
-    chunk.write_constant(Value(1), 1);
+    // -2 + 1
+    chunk.write_constant(Value(2), 1);
     chunk.write(Instruction{OpCode::NEGATE}, 1);
-    chunk.write_constant(Value("some string"), 1);
+    chunk.write_constant(Value(1), 1);
+    chunk.write(Instruction{OpCode::ADD}, 1);
     chunk.write(Instruction{OpCode::RETURN}, 2);
     this->interpret(chunk);
   }
@@ -26,7 +29,9 @@ namespace ss
   {
     while (this->ip < this->chunk->code.end()) {
       if constexpr (SHOW_DISASSEMBLY) {
-        this->print_stack();
+        if constexpr (PRINT_STACK) {
+          this->print_stack();
+        }
         this->disassemble_instruction(*this->chunk, *this->ip, this->ip - this->chunk->code.begin());
       }
       switch (static_cast<OpCode>(this->ip->major_opcode)) {
@@ -34,6 +39,26 @@ namespace ss
           break;
         case OpCode::CONSTANT: {
           this->chunk->push_stack(this->chunk->constant_at(this->ip->modifying_bits));
+        } break;
+        case OpCode::ADD: {
+          Value a = this->chunk->pop_stack();
+          Value b = this->chunk->pop_stack();
+          this->chunk->push_stack(a + b);
+        } break;
+        case OpCode::SUB: {
+          Value a = this->chunk->pop_stack();
+          Value b = this->chunk->pop_stack();
+          this->chunk->push_stack(a - b);
+        } break;
+        case OpCode::MUL: {
+          Value a = this->chunk->pop_stack();
+          Value b = this->chunk->pop_stack();
+          this->chunk->push_stack(a * b);
+        } break;
+        case OpCode::DIV: {
+          Value a = this->chunk->pop_stack();
+          Value b = this->chunk->pop_stack();
+          this->chunk->push_stack(a / b);
         } break;
         case OpCode::NEGATE: {
           this->chunk->push_stack(-this->chunk->pop_stack());
@@ -90,6 +115,18 @@ namespace ss
         Value constant = chunk.constant_at(i.modifying_bits);
         printf("%-16s %4lu '%s'\n", to_string(OpCode::CONSTANT), i.modifying_bits, constant.to_string().c_str());
       } break;
+      case OpCode::ADD: {
+        std::cout << to_string(OpCode::ADD) << '\n';
+      } break;
+      case OpCode::SUB: {
+        std::cout << to_string(OpCode::SUB) << '\n';
+      } break;
+      case OpCode::MUL: {
+        std::cout << to_string(OpCode::MUL) << '\n';
+      } break;
+      case OpCode::DIV: {
+        std::cout << to_string(OpCode::DIV) << '\n';
+      } break;
       case OpCode::NEGATE: {
         std::cout << to_string(OpCode::NEGATE) << '\n';
       } break;
@@ -104,7 +141,7 @@ namespace ss
 
   void VM::print_stack() const noexcept
   {
-    std::cout << "          ";
+    std::cout << "        | ";
     for (const auto& value : chunk->stack) {
       std::cout << "[ " << value.to_string() << " ]";
     }

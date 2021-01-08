@@ -1,1 +1,4 @@
-target_sources(${EXE_TEST} PRIVATE lib.test.cpp)
+target_sources(${EXE_TEST} PRIVATE
+  lib.test.cpp
+  datatypes.test.cpp
+)
