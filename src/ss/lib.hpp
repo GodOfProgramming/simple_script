@@ -1,6 +1,8 @@
+#pragma once
+
 #include "datatypes.hpp"
-#include "ss/chunk.hpp"
-#include "ss/util.hpp"
+#include "chunk.hpp"
+#include "util.hpp"
 #include <cinttypes>
 
 namespace ss
@@ -8,18 +10,21 @@ namespace ss
   class VM
   {
    public:
-    VM();
-    ~VM();
+    VM() = default;
+    ~VM() = default;
 
-    auto run() -> InterpretResult;
+    void test();
 
    private:
-    Chunk*                              chunk;
-    std::vector<std::uint8_t>::iterator ip;
+    Chunk*                 chunk;
+    std::vector<Instruction>::iterator ip;
 
-    auto interpret(Chunk* chunk) -> InterpretResult;
+    void interpret(Chunk& chunk);
+    void run();
 
-    void disassemble_instruction(std::size_t offset);
-    void print_value(const Value& v);
+    void disassemble_chunk(std::string name, Chunk& chunk) const noexcept;
+    void disassemble_instruction(Chunk& chunk, Instruction i, std::size_t offset) const noexcept;
+
+    void print_stack() const noexcept;
   };
 }  // namespace ss

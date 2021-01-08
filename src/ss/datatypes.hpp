@@ -1,3 +1,5 @@
+#pragma once
+
 #include <string>
 #include <variant>
 
@@ -5,7 +7,6 @@ namespace ss
 {
   class Value
   {
-    using Container = std::variant<double, std::string>;
     enum class Type
     {
       Number,
@@ -13,18 +14,25 @@ namespace ss
     };
 
    public:
+    using NumberType = double;
+    using StringType = std::string;
+
     Value(double v);
     Value(std::string v);
 
-    auto number() -> double*;
-    auto string() -> std::string*;
+    auto number() -> NumberType*;
+    auto string() -> StringType*;
 
-    auto to_string() -> std::string;
+    auto to_string() const -> std::string;
 
-    auto operator=(double v) -> Value&;
-    auto operator=(std::string v) -> Value&;
+    auto operator-() -> Value;
+
+    auto operator=(NumberType v) -> Value&;
+    auto operator=(StringType v) -> Value&;
 
    private:
+    using Container = std::variant<NumberType, StringType>;
+
     Type      datatype;
     Container value;
   };

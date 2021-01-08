@@ -7,5 +7,7 @@ int main()
 
   VM vm;
 
+  vm.test();
+
   return 0;
 }

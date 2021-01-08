@@ -1,5 +1,7 @@
+#include "exceptions.hpp"
 #include "lib.hpp"
 #include <exception>
+#include <iomanip>
 #include <iostream>
 #include <sstream>
 
@@ -10,55 +12,98 @@ namespace
 
 namespace ss
 {
-  auto VM::run() -> InterpretResult
+  void VM::test()
   {
-    using Type = InterpretResult::Type;
+    Chunk chunk;
+    chunk.write_constant(Value(1));
+    chunk.write_constant(Value("some string"));
+    chunk.write(Instruction{OpCode::RETURN});
+    this->disassemble_chunk("TEST", chunk);
+  }
 
+  void VM::run()
+  {
     while (this->ip < this->chunk->code.end()) {
       if constexpr (SHOW_DISASSEMBLY) {
-        std::cout << "          ";
-        for (const auto& value : this->chunk->stack) {
-          std::cout << "[ ";
-          this->print_value(value);
-          std::cout << " ]";
-        }
-        std::cout << '\n';
-        this->disassemble_instruction(this->ip - this->chunk->code.begin());
+        this->print_stack();
+        this->disassemble_instruction(*this->chunk, *this->ip, this->ip - this->chunk->code.begin());
       }
-      switch (static_cast<OpCode>(*this->ip)) {
+      switch (static_cast<OpCode>(this->ip->major_opcode)) {
         case OpCode::CONSTANT: {
           if (++this->ip < this->chunk->code.end()) {
-            Value constant = this->chunk->constants[*this->ip];
-            this->chunk->stack.push_back(constant);
+            Value constant = this->chunk->constant_at(this->ip->modifying_bits);
+            this->chunk->push_stack(constant);
           } else {
-            return InterpretResult(Type::RUNTIME_ERROR, "no value following constant opcode");
+            THROW_RUNTIME_ERROR("no value following constant opcode");
           }
+        } break;
+        case OpCode::NEGATE: {
+          this->chunk->push_stack(-this->chunk->pop_stack());
         } break;
         case OpCode::RETURN: {
           if (!this->chunk->stack_empty()) {
-            this->print_value(this->chunk->pop_stack());
+            std::cout << this->chunk->pop_stack().to_string() << '\n';
           }
-          return InterpretResult::ok();
+          return;
         } break;
         default: {
           std::stringstream ss;
-          ss << "invalid op code: " << static_cast<std::uint32_t>(*this->ip);
-          return InterpretResult(Type::RUNTIME_ERROR, ss.str());
+          ss << "invalid op code: " << static_cast<std::uint32_t>(this->ip->major_opcode);
+          THROW_RUNTIME_ERROR(ss.str());
         }
       }
       this->ip++;
     }
-
-    return InterpretResult::ok();
   }
 
-  auto VM::interpret(Chunk* chunk) -> InterpretResult
+  void VM::interpret(Chunk& chunk)
   {
-    this->chunk = chunk;
-    this->ip    = chunk->code.begin();
+    this->chunk = &chunk;
+    this->ip    = this->chunk->code.begin();
 
     this->run();
   }
 
-  void VM::print_value(const Value& value) {}
+  void VM::disassemble_chunk(std::string name, Chunk& chunk) const noexcept
+  {
+    std::cout << "== " << name << " ==\n";
+
+    std::size_t offset = 0;
+    for (const auto& i : chunk.code) {
+      this->disassemble_instruction(chunk, i, offset++);
+    }
+  }
+
+  void VM::disassemble_instruction(Chunk& chunk, Instruction i, std::size_t offset) const noexcept
+  {
+    printf("%04lu ", offset);
+
+    switch (i.major_opcode) {
+      case OpCode::NO_OP: {
+        std::cout << to_string(OpCode::NO_OP) << '\n';
+      } break;
+      case OpCode::CONSTANT: {
+        Value constant = chunk.constant_at(i.modifying_bits);
+        printf("%-16s %4lu '%s'\n", to_string(OpCode::CONSTANT), i.modifying_bits, constant.to_string().c_str());
+      } break;
+      case OpCode::NEGATE: {
+        std::cout << to_string(OpCode::NEGATE) << '\n';
+      } break;
+      case OpCode::RETURN: {
+        std::cout << to_string(OpCode::RETURN) << '\n';
+      } break;
+      default: {
+        std::cout << to_string(i.major_opcode) << ": " << static_cast<std::uint8_t>(i.major_opcode) << '\n';
+      } break;
+    }
+  }
+
+  void VM::print_stack() const noexcept
+  {
+    std::cout << "          ";
+    for (const auto& value : chunk->stack) {
+      std::cout << "[ " << value.to_string() << " ]";
+    }
+    std::cout << '\n';
+  }
 }  // namespace ss
