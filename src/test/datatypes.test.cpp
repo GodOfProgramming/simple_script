@@ -130,3 +130,18 @@ TEST(Value, METHOD(operator_sub, can_not_sub_number_with_anything_else))
   EXPECT_THROW(s - n, RuntimeError);
   EXPECT_THROW(s - nil, RuntimeError);
 }
+
+TEST(Value, METHOD(operator_mul, can_mul_two_numbers))
+{
+  Value a(2);
+  Value b(3);
+
+  EXPECT_EQ(a * b, Value(6));
+}
+
+TEST(Value, METHOD(operator_mul, can_mul_a_number_with_a_string)) {
+  Value a(2);
+  Value b(3);
+
+  EXPECT_EQ(a * b, Value(6));
+}
