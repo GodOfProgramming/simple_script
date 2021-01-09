@@ -99,13 +99,18 @@ namespace ss
 
   void VM::disassemble_instruction(Chunk& chunk, Instruction i, std::size_t offset) const noexcept
   {
-    printf("%04lu ", offset);
+    std::ios init(nullptr);
+    init.copyfmt(std::cout);
+
+    std::cout << std::setw(4) << std::setfill('0') << offset << ' ';
 
     if (offset > 0 && chunk.line_at(offset) == chunk.line_at(offset - 1)) {
-      printf("   | ");
+      std::cout << "   | ";
     } else {
-      printf("%04lu ", chunk.line_at(offset));
+      std::cout << std::setw(4) << std::setfill('0') << chunk.line_at(offset) << ' ';
     }
+
+    std::cout.copyfmt(init);
 
     switch (i.major_opcode) {
       case OpCode::NO_OP: {
@@ -113,7 +118,12 @@ namespace ss
       } break;
       case OpCode::CONSTANT: {
         Value constant = chunk.constant_at(i.modifying_bits);
-        printf("%-16s %4lu '%s'\n", to_string(OpCode::CONSTANT), i.modifying_bits, constant.to_string().c_str());
+        std::cout << std::setw(16) << std::left << to_string(OpCode::CONSTANT);
+        std::cout.copyfmt(init);
+        std::cout << ' ' << std::setw(4) << i.modifying_bits;
+        std::cout.copyfmt(init);
+        std::cout << " '" << constant.to_string().c_str() << "'\n";
+        std::cout.copyfmt(init);
       } break;
       case OpCode::ADD: {
         std::cout << to_string(OpCode::ADD) << '\n';
