@@ -15,7 +15,13 @@ namespace ss
     };
 
    public:
-    using NilType    = void*;
+    struct NilType
+    {
+      constexpr auto operator==(const NilType&) const -> bool
+      {
+        return true;
+      }
+    };
     using NumberType = double;
     using StringType = std::string;
 
@@ -38,10 +44,13 @@ namespace ss
     auto operator*(const Value& other) const -> Value;
     auto operator/(const Value& other) const -> Value;
 
+    auto operator=(NilType v) noexcept -> Value&;
     auto operator=(NumberType v) noexcept -> Value&;
     auto operator=(StringType v) noexcept -> Value&;
 
     auto operator==(const Value& other) const noexcept -> bool;
+
+    static NilType nil;
 
    private:
     std::variant<NilType, NumberType, StringType> value;

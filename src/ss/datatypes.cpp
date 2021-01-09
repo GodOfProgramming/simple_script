@@ -4,7 +4,9 @@
 
 namespace ss
 {
-  Value::Value(): value(nullptr) {}
+  Value::NilType Value::nil;
+
+  Value::Value(): value(NilType()) {}
 
   Value::Value(NumberType v): value(v) {}
 
@@ -195,14 +197,22 @@ namespace ss
     }
   }
 
+  auto Value::operator=(NilType v) noexcept -> Value&
+  {
+    this->value = v;
+    return *this;
+  }
+
   auto Value::operator=(NumberType v) noexcept -> Value&
   {
-    return *this = std::move(Value(v));
+    this->value = v;
+    return *this;
   }
 
   auto Value::operator=(StringType v) noexcept -> Value&
   {
-    return *this = std::move(Value(v));
+    this->value = v;
+    return *this;
   }
 
   auto Value::operator==(const Value& other) const noexcept -> bool

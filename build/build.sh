@@ -40,6 +40,6 @@ if [ $run_tests -eq 1 ]; then
 fi
 
 if [ $gen_coverage -eq 1 ]; then
-	gcovr -r ../. --html --html-details -o coverage.html
+	gcovr -r ../. --html --html-details -o coverage.html || exit $?
 fi
 

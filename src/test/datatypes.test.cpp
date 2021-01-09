@@ -98,7 +98,7 @@ TEST(Value, METHOD(operator_add, can_add_strings))
   EXPECT_EQ(a + b + c, Value("hello world"));
 }
 
-TEST(Value, METHOD(operator_add, can_not_add_nil_with_anything))
+TEST(Value, METHOD(operator_add, can_not_add_invalid_types))
 {
   Value nil;
   Value n(1.0);
@@ -117,7 +117,7 @@ TEST(Value, METHOD(operator_sub, can_sub_two_numbers))
   EXPECT_EQ(a - b, Value(-1.0));
 }
 
-TEST(Value, METHOD(operator_sub, can_not_sub_number_with_anything_else))
+TEST(Value, METHOD(operator_sub, can_not_sub_invalid_types))
 {
   Value nil;
   Value n(1);
@@ -139,9 +139,69 @@ TEST(Value, METHOD(operator_mul, can_mul_two_numbers))
   EXPECT_EQ(a * b, Value(6));
 }
 
-TEST(Value, METHOD(operator_mul, can_mul_a_number_with_a_string)) {
+TEST(Value, METHOD(operator_mul, can_mul_a_number_with_a_string))
+{
   Value a(2);
+  Value b("a");
+
+  EXPECT_EQ(a * b, Value("aa"));
+}
+
+TEST(Value, METHOD(operator_mul, can_mul_a_string_with_a_number))
+{
+  Value a("a");
   Value b(3);
 
-  EXPECT_EQ(a * b, Value(6));
+  EXPECT_EQ(a * b, Value("aaa"));
+}
+
+TEST(Value, METHOD(operator_mul, can_not_mul_invalid_types))
+{
+  Value nil;
+  Value n(1);
+  Value s("string");
+
+  EXPECT_THROW(n * nil, RuntimeError);
+  EXPECT_THROW(nil * n, RuntimeError);
+  EXPECT_THROW(s * nil, RuntimeError);
+  EXPECT_THROW(nil * s, RuntimeError);
+}
+
+TEST(Value, METHOD(operator_sub, can_div_two_numbers))
+{
+  Value a(1.0);
+  Value b(2.0);
+  EXPECT_EQ(a / b, Value(0.5));
+}
+
+TEST(Value, METHOD(operator_sub, can_not_div_invalid_types))
+{
+  Value nil;
+  Value n(1);
+  Value s("string");
+
+  EXPECT_THROW(n / nil, RuntimeError);
+  EXPECT_THROW(n / s, RuntimeError);
+  EXPECT_THROW(nil / n, RuntimeError);
+  EXPECT_THROW(nil / s, RuntimeError);
+  EXPECT_THROW(s / n, RuntimeError);
+  EXPECT_THROW(s / nil, RuntimeError);
+}
+
+TEST(Value, METHOD(assign_operator, can_assign))
+{
+  Value nil;
+  Value num(1.0);
+  Value str("s");
+
+  Value x;
+
+  x = "s";
+  EXPECT_EQ(x, str);
+
+  x = 1;
+  EXPECT_EQ(x, num);
+
+  x = Value::nil;
+  EXPECT_EQ(x, nil);
 }
