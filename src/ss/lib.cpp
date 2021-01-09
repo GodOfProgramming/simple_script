@@ -13,6 +13,41 @@ namespace
 
 namespace ss
 {
+  VMConfig VMConfig::basic;
+
+  VMConfig::VMConfig(std::istream* is, std::ostream* os)
+   : istream(is),
+     ostream(os),
+     istream_initial_state(std::make_shared<std::ios>(nullptr)),
+     ostream_initial_state(std::make_shared<std::ios>(nullptr))
+  {
+    this->istream_initial_state->copyfmt(*this->istream);
+    this->ostream_initial_state->copyfmt(*this->ostream);
+  }
+
+  void VMConfig::reset_istream()
+  {
+    this->istream->copyfmt(*this->istream_initial_state);
+  }
+
+  void VMConfig::reset_ostream()
+  {
+    this->ostream->copyfmt(*this->ostream_initial_state);
+  }
+
+  auto repl(VMConfig cfg) -> int
+  {
+    VM   vm(cfg);
+    bool exit      = false;
+    int  exit_code = 0;
+
+    while (!exit) {
+      cfg.write("> ");
+    }
+
+    return exit_code;
+  }
+
   void VM::test()
   {
     Chunk chunk;
@@ -24,6 +59,8 @@ namespace ss
     chunk.write(Instruction{OpCode::RETURN}, 2);
     this->interpret(chunk);
   }
+
+  VM::VM(VMConfig cfg): config(cfg), chunk(nullptr) {}
 
   void VM::run()
   {
@@ -65,7 +102,7 @@ namespace ss
         } break;
         case OpCode::RETURN: {
           if (!this->chunk->stack_empty()) {
-            std::cout << this->chunk->pop_stack().to_string() << '\n';
+            this->config.write_line(this->chunk->pop_stack().to_string());
           }
           return;
         } break;
@@ -87,9 +124,9 @@ namespace ss
     this->run();
   }
 
-  void VM::disassemble_chunk(std::string name, Chunk& chunk) const noexcept
+  void VM::disassemble_chunk(std::string name, Chunk& chunk) noexcept
   {
-    std::cout << "== " << name << " ==\n";
+    this->config.write_line("== ", name, " ==");
 
     std::size_t offset = 0;
     for (const auto& i : chunk.code) {
@@ -97,64 +134,61 @@ namespace ss
     }
   }
 
-  void VM::disassemble_instruction(Chunk& chunk, Instruction i, std::size_t offset) const noexcept
+  void VM::disassemble_instruction(Chunk& chunk, Instruction i, std::size_t offset) noexcept
   {
-    std::ios init(nullptr);
-    init.copyfmt(std::cout);
-
-    std::cout << std::setw(4) << std::setfill('0') << offset << ' ';
+    this->config.write(std::setw(4), std::setfill('0'), offset, ' ');
 
     if (offset > 0 && chunk.line_at(offset) == chunk.line_at(offset - 1)) {
-      std::cout << "   | ";
+      this->config.write("   | ");
     } else {
-      std::cout << std::setw(4) << std::setfill('0') << chunk.line_at(offset) << ' ';
+      this->config.write(std::setw(4), std::setfill('0'), chunk.line_at(offset), ' ');
     }
 
-    std::cout.copyfmt(init);
+    this->config.reset_ostream();
 
     switch (i.major_opcode) {
       case OpCode::NO_OP: {
-        std::cout << to_string(OpCode::NO_OP) << '\n';
+        this->config.write_line(to_string(OpCode::NO_OP));
       } break;
       case OpCode::CONSTANT: {
         Value constant = chunk.constant_at(i.modifying_bits);
-        std::cout << std::setw(16) << std::left << to_string(OpCode::CONSTANT);
-        std::cout.copyfmt(init);
-        std::cout << ' ' << std::setw(4) << i.modifying_bits;
-        std::cout.copyfmt(init);
-        std::cout << " '" << constant.to_string().c_str() << "'\n";
-        std::cout.copyfmt(init);
+        this->config.write(std::setw(16), std::left, to_string(OpCode::CONSTANT));
+        this->config.reset_ostream();
+        this->config.write(' ', std::setw(4), i.modifying_bits);
+        this->config.reset_ostream();
+        this->config.write(" '", constant.to_string().c_str(), "'\n");
+        this->config.reset_ostream();
       } break;
       case OpCode::ADD: {
-        std::cout << to_string(OpCode::ADD) << '\n';
+        this->config.write_line(to_string(OpCode::ADD));
       } break;
       case OpCode::SUB: {
-        std::cout << to_string(OpCode::SUB) << '\n';
+        this->config.write_line(to_string(OpCode::SUB));
       } break;
       case OpCode::MUL: {
-        std::cout << to_string(OpCode::MUL) << '\n';
+        this->config.write_line(to_string(OpCode::MUL));
       } break;
       case OpCode::DIV: {
-        std::cout << to_string(OpCode::DIV) << '\n';
+        this->config.write_line(to_string(OpCode::DIV));
       } break;
       case OpCode::NEGATE: {
-        std::cout << to_string(OpCode::NEGATE) << '\n';
+        this->config.write_line(to_string(OpCode::NEGATE));
       } break;
       case OpCode::RETURN: {
-        std::cout << to_string(OpCode::RETURN) << '\n';
+        this->config.write_line(to_string(OpCode::RETURN));
       } break;
       default: {
-        std::cout << to_string(i.major_opcode) << ": " << static_cast<std::uint8_t>(i.major_opcode) << '\n';
+        this->config.write_line(to_string(i.major_opcode), ": ", static_cast<std::uint8_t>(i.major_opcode));
       } break;
     }
   }
 
-  void VM::print_stack() const noexcept
+  void VM::print_stack() noexcept
   {
-    std::cout << "        | ";
+    this->config.write("        | ");
     for (const auto& value : chunk->stack) {
-      std::cout << "[ " << value.to_string() << " ]";
+      this->config.write("[ ", value.to_string(), " ]");
     }
-    std::cout << '\n';
+    this->config.write_line();
   }
 }  // namespace ss
