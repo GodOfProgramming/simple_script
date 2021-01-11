@@ -114,6 +114,8 @@ namespace ss
     std::size_t      line;
   };
 
+  void compile(std::string& src, Chunk& chunk);
+
   class Scanner
   {
    public:
@@ -144,15 +146,26 @@ namespace ss
     auto is_alpha(char c) const noexcept -> bool;
   };
 
-  class Compiler
+  class Parser
   {
-   public:
-    Compiler(std::string& src) noexcept;
-    ~Compiler() = default;
+    using TokenList     = std::vector<Token>;
+    using TokenIterator = TokenList::iterator;
 
-    void compile();
+   public:
+    Parser(TokenList&& tokens, Chunk& chunk) noexcept;
+    ~Parser() = default;
+
+    void parse();
 
    private:
-    std::string& source;
+    TokenList     tokens;
+    TokenIterator iter;
+    Chunk&        chunk;
+
+    auto previous() const -> TokenIterator;
+    void advance() noexcept;
+    void consume(TokenType type, std::string err);
+
+    void expression();
   };
 }  // namespace ss

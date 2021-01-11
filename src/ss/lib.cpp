@@ -13,7 +13,6 @@ namespace
 
 namespace ss
 {
-
   auto repl(VMConfig cfg) -> int
   {
     VM          vm(cfg);
@@ -53,8 +52,15 @@ namespace ss
 
   VM::VM(VMConfig cfg): config(cfg), chunk(nullptr) {}
 
-  void VM::run_script(std::string src) {
+  void VM::run_script(std::string src)
+  {
+    Chunk chunk;
 
+    Parser compiler(src);
+
+    compiler.compile(chunk);
+
+    this->interpret(chunk);
   }
 
   void VM::run()

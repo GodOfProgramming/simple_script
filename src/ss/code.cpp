@@ -1,3 +1,4 @@
+#include "chunk.hpp"
 #include "code.hpp"
 #include "exceptions.hpp"
 #include <sstream>
@@ -5,6 +6,16 @@
 
 namespace ss
 {
+  void compile(std::string& src, Chunk& chunk)
+  {
+    Scanner scanner(src);
+    auto    tokens = scanner.scan();
+
+    Parser parser;
+
+    parser.parse(tokens, chunk);
+  }
+
   Scanner::Scanner(std::string& src): source(src), current(source.begin()), line(1) {}
 
   auto Scanner::scan() -> std::vector<Token>
@@ -272,14 +283,26 @@ namespace ss
     return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
   }
 
-  Compiler::Compiler(std::string& src): source(src) {}
+  Parser::Parser(TokenList&& t, Chunk& c): tokens(std::move(t)), chunk(c) {}
 
-  void Compiler::compile()
+  void Parser::parse()
   {
-    Scanner scanner(this->source);
-    auto    tokens = scanner.scan();
-
-    for (auto iter = tokens.begin(); iter < tokens.end(); iter++) {
+    for (this->iter = tokens.begin(); this->iter < tokens.end(); this->advance()) {
+      this->expression();
     }
+
+    this->consume(TokenType::END_OF_FILE, "expected end of expression");
   }
+
+  auto Parser::previous() const -> TokenIterator
+  {
+    return this->iter - 1;
+  }
+
+  void Parser::advance() noexcept
+  {
+    this->iter++;
+  }
+
+  void Parser::consume(TokenType type, std::string err) {}
 }  // namespace ss
