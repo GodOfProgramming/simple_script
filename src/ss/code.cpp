@@ -1,6 +1,7 @@
 #include "code.hpp"
 #include "exceptions.hpp"
 #include <sstream>
+#include <cstring>
 
 namespace ss
 {
@@ -133,6 +134,76 @@ namespace ss
     return this->make_token(TokenType::NUMBER);
   }
 
+  auto Scanner::make_identifier() -> Token
+  {
+    while (this->is_alpha(this->peek()) || this->is_digit(this->peek())) {
+      this->advance();
+    }
+
+    return this->make_token(this->identifier());
+  }
+
+  auto Scanner::identifier() -> TokenType
+  {
+    switch (*this->start) {
+      case 'a': {
+        return this->check_keyword(1, 2, "nd", TokenType::AND);
+      }
+      case 'c': {
+        return this->check_keyword(1, 4, "lass", TokenType::CLASS);
+      }
+      case 'e': {
+        return this->check_keyword(1, 3, "lse", TokenType::ELSE);
+      }
+      case 'f': {
+        switch (*(this->start + 1)) {
+          case 'a': {
+            return this->check_keyword(2, 3, "lse", TokenType::FALSE);
+          }
+          case 'o': {
+            return this->check_keyword(2, 1, "r", TokenType::FOR);
+          }
+          case 'n': {
+            return this->check_keyword(2, 0, "", TokenType::FN);
+          }
+        }
+      }
+      case 'i': {
+        return this->check_keyword(1, 1, "f", TokenType::IF);
+      }
+      case 'l': {
+        return this->check_keyword(1, 2, "et", TokenType::LET);
+      }
+      case 'n': {
+        return this->check_keyword(1, 2, "il", TokenType::NIL);
+      }
+      case 'o': {
+        return this->check_keyword(1, 1, "r", TokenType::OR);
+      }
+      case 'p': {
+        return this->check_keyword(1, 4, "rint", TokenType::PRINT);
+      }
+      case 'r': {
+        return this->check_keyword(1, 5, "eturn", TokenType::RETURN);
+      }
+      case 't': {
+        return this->check_keyword(1, 3, "rue", TokenType::TRUE);
+      }
+      case 'w': {
+        return this->check_keyword(1, 4, "hile", TokenType::WHILE);
+      }
+    }
+  }
+
+  auto Scanner::check_keyword(std::size_t start, std::size_t len, const char* rest, TokenType type) const noexcept -> TokenType
+  {
+    if (this->current - this->start == start + len && std::memcmp((this->start + start).base(), rest, len) == 0) {
+      return type;
+    }
+
+    return TokenType::IDENTIFIER;
+  }
+
   auto Scanner::is_at_end() const noexcept -> bool
   {
     return this->current >= this->source.end();
@@ -194,6 +265,11 @@ namespace ss
   auto Scanner::is_digit(char c) const noexcept -> bool
   {
     return !this->is_at_end() && c >= '0' && c <= '9';
+  }
+
+  auto Scanner::is_alpha(char c) const noexcept -> bool
+  {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
   }
 
   Compiler::Compiler(std::string& src): source(src) {}

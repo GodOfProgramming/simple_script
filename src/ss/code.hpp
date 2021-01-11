@@ -95,14 +95,12 @@ namespace ss
     FOR,
     FN,
     IF,
+    LET,
     NIL,
     OR,
     PRINT,
     RETURN,
-    SUPER,
-    THIS,
     TRUE,
-    LET,
     WHILE,
 
     ERROR,
@@ -133,6 +131,9 @@ namespace ss
     auto make_token(TokenType t) const noexcept -> Token;
     auto make_string() -> Token;
     auto make_number() -> Token;
+    auto make_identifier() -> Token;
+    auto identifier() -> TokenType;
+    auto check_keyword(std::size_t start, std::size_t len, const char* rest, TokenType type) const noexcept -> TokenType;
     auto is_at_end() const noexcept -> bool;
     auto peek() const noexcept -> char;
     auto peek_next() const noexcept -> char;
@@ -140,6 +141,7 @@ namespace ss
     auto advance_if_match(char expected) -> bool;
     void skip_whitespace() noexcept;
     auto is_digit(char c) const noexcept -> bool;
+    auto is_alpha(char c) const noexcept -> bool;
   };
 
   class Compiler
