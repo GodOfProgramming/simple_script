@@ -56,9 +56,7 @@ namespace ss
   {
     Chunk chunk;
 
-    Parser compiler(src);
-
-    compiler.compile(chunk);
+    compile(src, chunk);
 
     this->interpret(chunk);
   }

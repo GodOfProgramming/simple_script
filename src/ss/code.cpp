@@ -1,22 +1,94 @@
-#include "chunk.hpp"
 #include "code.hpp"
+#include "datatypes.hpp"
 #include "exceptions.hpp"
-#include <sstream>
+#include <charconv>
 #include <cstring>
+#include <sstream>
+#include <boost/convert.hpp>
+#include <boost/convert/strtol.hpp>
 
 namespace ss
 {
+  void Chunk::write(Instruction i, std::size_t line)
+  {
+    this->code.push_back(i);
+    this->add_line(line);
+  }
+
+  void Chunk::write_constant(Value v, std::size_t line)
+  {
+    this->constants.push_back(v);
+    Instruction i{
+     OpCode::CONSTANT,
+     this->constants.size() - 1,
+    };
+    this->write(i, line);
+  }
+
+  auto Chunk::constant_at(std::size_t offset) -> Value
+  {
+    return this->constants[offset];
+  }
+
+  void Chunk::push_stack(Value v)
+  {
+    this->stack.push_back(v);
+  }
+
+  auto Chunk::pop_stack() -> Value
+  {
+    Value v = this->stack.back();
+    this->stack.pop_back();
+    return v;
+  }
+
+  auto Chunk::stack_empty() -> bool
+  {
+    return this->stack.empty();
+  }
+
+  // increments the current number of instructions on a line
+  // or publishes the number and resets the count
+  void Chunk::add_line(std::size_t line) noexcept
+  {
+    if (this->last_line == line) {
+      // same line number
+      this->instructions_on_line += 1;
+    } else {
+      this->lines.push_back(this->instructions_on_line);
+      this->last_line            = line;
+      this->instructions_on_line = 1;  // current instruction
+    }
+  }
+
+  // extracts the line at the given instruction offset
+  auto Chunk::line_at(std::size_t offset) const noexcept -> std::size_t
+  {
+    std::size_t accum = 0;
+    std::size_t line  = 0;
+    for (const auto num_instructions_on_line : this->lines) {
+      if (accum + num_instructions_on_line > offset) {
+        return line;
+      } else {
+        accum += num_instructions_on_line;
+      }
+      line++;
+    }
+    return line;
+  }
+
   void compile(std::string& src, Chunk& chunk)
   {
     Scanner scanner(src);
-    auto    tokens = scanner.scan();
 
-    Parser parser;
+    auto tokens = scanner.scan();
 
-    parser.parse(tokens, chunk);
+    Parser parser(std::move(tokens), chunk);
+
+    parser.parse();
   }
 
-  Scanner::Scanner(std::string& src): source(src), current(source.begin()), line(1) {}
+  Scanner::Scanner(std::string& src) noexcept: source(src), current(source.begin()), line(1) {}
 
   auto Scanner::scan() -> std::vector<Token>
   {
@@ -99,6 +171,8 @@ namespace ss
     token.type   = t;
     token.lexeme = std::string_view(this->start.base(), this->current - this->start);
     token.line   = this->line;
+
+    return token;
   }
 
   auto Scanner::make_string() -> Token
@@ -177,6 +251,8 @@ namespace ss
           case 'n': {
             return this->check_keyword(2, 0, "", TokenType::FN);
           }
+          default:
+            return TokenType::IDENTIFIER;
         }
       }
       case 'i': {
@@ -203,12 +279,16 @@ namespace ss
       case 'w': {
         return this->check_keyword(1, 4, "hile", TokenType::WHILE);
       }
+      default:
+        return TokenType::IDENTIFIER;
     }
   }
 
   auto Scanner::check_keyword(std::size_t start, std::size_t len, const char* rest, TokenType type) const noexcept -> TokenType
   {
-    if (this->current - this->start == start + len && std::memcmp((this->start + start).base(), rest, len) == 0) {
+    if (
+     static_cast<std::size_t>(this->current - this->start) == start + len &&
+     std::memcmp((this->start + start).base(), rest, len) == 0) {
       return type;
     }
 
@@ -283,7 +363,7 @@ namespace ss
     return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
   }
 
-  Parser::Parser(TokenList&& t, Chunk& c): tokens(std::move(t)), chunk(c) {}
+  Parser::Parser(TokenList&& t, Chunk& c) noexcept: tokens(std::move(t)), chunk(c) {}
 
   void Parser::parse()
   {
@@ -304,5 +384,40 @@ namespace ss
     this->iter++;
   }
 
-  void Parser::consume(TokenType type, std::string err) {}
+  void Parser::consume(TokenType type, std::string err)
+  {
+    if (this->iter->type == type) {
+      this->advance();
+    } else {
+      this->error(this->iter, err);
+    }
+  }
+
+  void Parser::error(TokenIterator tok, std::string msg) const
+  {
+    std::stringstream ss;
+    ss << tok->line << ": " << msg;
+    THROW_COMPILETIME_ERROR(ss.str());
+  }
+
+  void Parser::emit_instruction(Instruction i)
+  {
+    this->chunk.write(i, this->previous()->line);
+  }
+
+  void Parser::parse_number()
+  {
+    auto& lexeme = this->iter->lexeme;
+
+    const char* begin = lexeme.data();
+
+    // TODO when gcc finally has from_chars support for non-integrals
+    char* end = const_cast<char*>(lexeme.data()) + lexeme.size();
+
+    Value v = std::strtod(begin, &end);
+
+    this->chunk.write_constant(v, this->previous()->line);
+  }
+
+  void Parser::expression() {}
 }  // namespace ss

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "cfg.hpp"
-#include "chunk.hpp"
 #include "code.hpp"
 #include "datatypes.hpp"
 #include <cinttypes>
