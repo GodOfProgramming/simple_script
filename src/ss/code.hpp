@@ -4,6 +4,7 @@
 #include <cinttypes>
 #include <string>
 #include <vector>
+#include <functional>
 
 namespace ss
 {
@@ -58,61 +59,63 @@ namespace ss
     }
   }
 
-  enum class TokenType
-  {
-    // Single-character tokens.
-    LEFT_PAREN,
-    RIGHT_PAREN,
-    LEFT_BRACE,
-    RIGHT_BRACE,
-    COMMA,
-    DOT,
-    MINUS,
-    PLUS,
-    SEMICOLON,
-    SLASH,
-    STAR,
-
-    // One or two character tokens.
-    BANG,
-    BANG_EQUAL,
-    EQUAL,
-    EQUAL_EQUAL,
-    GREATER,
-    GREATER_EQUAL,
-    LESS,
-    LESS_EQUAL,
-
-    // Literals.
-    IDENTIFIER,
-    STRING,
-    NUMBER,
-
-    // Keywords.
-    AND,
-    CLASS,
-    ELSE,
-    FALSE,
-    FOR,
-    FN,
-    IF,
-    LET,
-    NIL,
-    OR,
-    PRINT,
-    RETURN,
-    TRUE,
-    WHILE,
-
-    ERROR,
-    END_OF_FILE,
-  };
-
   struct Token
   {
-    TokenType        type;
+    enum class Type
+    {
+      // Single-character tokens.
+      LEFT_PAREN,
+      RIGHT_PAREN,
+      LEFT_BRACE,
+      RIGHT_BRACE,
+      COMMA,
+      DOT,
+      MINUS,
+      PLUS,
+      SEMICOLON,
+      SLASH,
+      STAR,
+
+      // One or two character tokens.
+      BANG,
+      BANG_EQUAL,
+      EQUAL,
+      EQUAL_EQUAL,
+      GREATER,
+      GREATER_EQUAL,
+      LESS,
+      LESS_EQUAL,
+
+      // Literals.
+      IDENTIFIER,
+      STRING,
+      NUMBER,
+
+      // Keywords.
+      AND,
+      CLASS,
+      ELSE,
+      FALSE,
+      FOR,
+      FN,
+      IF,
+      LET,
+      NIL,
+      OR,
+      PRINT,
+      RETURN,
+      TRUE,
+      WHILE,
+
+      ERROR,
+      END_OF_FILE,
+      LAST,
+    };
+
+    Type             type;
     std::string_view lexeme;
     std::size_t      line;
+    std::size_t      column;
   };
 
   class Chunk
@@ -156,19 +159,22 @@ namespace ss
     std::string::iterator start;
     std::string::iterator current;
     std::size_t           line;
+    std::size_t           column;
 
-    auto make_token(TokenType t) const noexcept -> Token;
+    void error(std::string msg) const;
+    auto make_token(Token::Type t) const noexcept -> Token;
     auto make_string() -> Token;
     auto make_number() -> Token;
     auto make_identifier() -> Token;
-    auto identifier() -> TokenType;
-    auto check_keyword(std::size_t start, std::size_t len, const char* rest, TokenType type) const noexcept -> TokenType;
+    auto identifier() -> Token::Type;
+    auto check_keyword(std::size_t start, std::size_t len, const char* rest, Token::Type type) const noexcept -> Token::Type;
     auto is_at_end() const noexcept -> bool;
     auto peek() const noexcept -> char;
     auto peek_next() const noexcept -> char;
     auto advance() noexcept -> char;
     auto advance_if_match(char expected) noexcept -> bool;
     void skip_whitespace() noexcept;
+    void advance_then_skip_whitespace() noexcept;
     auto is_digit(char c) const noexcept -> bool;
     auto is_alpha(char c) const noexcept -> bool;
   };
@@ -177,6 +183,30 @@ namespace ss
   {
     using TokenList     = std::vector<Token>;
     using TokenIterator = TokenList::iterator;
+
+    enum class Precedence
+    {
+      NONE,
+      ASSIGNMENT,  // =
+      OR,          // or
+      AND,         // and
+      EQUALITY,    // == !=
+      COMPARISON,  // < > <= >=
+      TERM,        // + -
+      FACTOR,      // / *
+      UNARY,       // - !
+      CALL,        // . ()
+      PRIMARY,
+    };
+
+    using ParseFn = std::function<void(Parser*)>;
+
+    struct ParseRule
+    {
+      ParseFn    prefix;
+      ParseFn    infix;
+      Precedence precedence;
+    };
 
    public:
     Parser(TokenList&& tokens, Chunk& chunk) noexcept;
@@ -191,11 +221,17 @@ namespace ss
 
     auto previous() const -> TokenIterator;
     void advance() noexcept;
-    void consume(TokenType type, std::string err);
+    void consume(Token::Type type, std::string err);
     void error(TokenIterator tok, std::string msg) const;
     void emit_instruction(Instruction i);
 
     void parse_number();
+    void parse_precedence(Precedence p);
+    auto get_rule(Token::Type t) const noexcept -> const ParseRule&;
+
     void expression();
+    void grouping();
+    void unary();
+    void binary();
   };
 }  // namespace ss

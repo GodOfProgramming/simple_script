@@ -9,11 +9,14 @@ namespace
 {
   constexpr bool SHOW_DISASSEMBLY = true;
   constexpr bool PRINT_STACK      = true;
+  constexpr bool ECHO_INPUT       = true;
 }  // namespace
 
 namespace ss
 {
-  auto repl(VMConfig cfg) -> int
+  VM::VM(VMConfig cfg): config(cfg), chunk(nullptr) {}
+
+  auto VM::repl(VMConfig cfg) -> int
   {
     VM          vm(cfg);
     bool        exit        = false;
@@ -23,34 +26,24 @@ namespace ss
 
     while (!exit) {
       cfg.write("ss(main):", line_number, "> ");
-      cfg.read(line);
+      cfg.read_line(line);
+
+      if (ECHO_INPUT) {
+        cfg.write_line(line);
+      }
 
       try {
         vm.run_script(line);
         line_number++;
       } catch (CompiletimeError& e) {
-        cfg.write("compile error: ", e.what());
+        cfg.write_line("compile error: ", e.what());
       } catch (RuntimeError& e) {
-        cfg.write("runtime error: ", e.what());
+        cfg.write_line("runtime error: ", e.what());
       }
     }
 
     return exit_code;
   }
-
-  void VM::test()
-  {
-    Chunk chunk;
-    // -2 + 1
-    chunk.write_constant(Value(2), 1);
-    chunk.write(Instruction{OpCode::NEGATE}, 1);
-    chunk.write_constant(Value(1), 1);
-    chunk.write(Instruction{OpCode::ADD}, 1);
-    chunk.write(Instruction{OpCode::RETURN}, 2);
-    this->interpret(chunk);
-  }
-
-  VM::VM(VMConfig cfg): config(cfg), chunk(nullptr) {}
 
   void VM::run_script(std::string src)
   {
@@ -61,7 +54,7 @@ namespace ss
     this->interpret(chunk);
   }
 
-  void VM::run()
+  void VM::run_chunk()
   {
     while (this->ip < this->chunk->code.end()) {
       if constexpr (SHOW_DISASSEMBLY) {
@@ -120,7 +113,7 @@ namespace ss
     this->chunk = &chunk;
     this->ip    = this->chunk->code.begin();
 
-    this->run();
+    this->run_chunk();
   }
 
   void VM::disassemble_chunk(std::string name, Chunk& chunk) noexcept

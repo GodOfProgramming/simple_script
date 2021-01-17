@@ -57,7 +57,7 @@ namespace ss
     void read_line(T& t)
     {
       if (this->istream != nullptr) {
-        (*istream) >> t;
+        std::getline(*this->istream, t);
       }
     }
 

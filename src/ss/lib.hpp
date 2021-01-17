@@ -7,13 +7,13 @@
 
 namespace ss
 {
-  auto repl(VMConfig cfg = VMConfig::basic) -> int;
   class VM
   {
    public:
     VM(VMConfig cfg = VMConfig::basic);
     ~VM() = default;
 
+    auto repl(VMConfig cfg = VMConfig::basic) -> int;
     void run_script(std::string src);
 
     void test();
@@ -25,8 +25,10 @@ namespace ss
     Chunk*             chunk;
     InstructionPointer ip;
 
-    void interpret(Chunk& chunk);
     void run();
+
+    void interpret(Chunk& chunk);
+    void run_chunk();
 
     void disassemble_chunk(std::string name, Chunk& chunk) noexcept;
     void disassemble_instruction(Chunk& chunk, Instruction i, std::size_t offset) noexcept;

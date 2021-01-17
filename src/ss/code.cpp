@@ -1,11 +1,12 @@
 #include "code.hpp"
 #include "datatypes.hpp"
 #include "exceptions.hpp"
-#include <charconv>
-#include <cstring>
-#include <sstream>
 #include <boost/convert.hpp>
 #include <boost/convert/strtol.hpp>
+#include <charconv>
+#include <cstring>
+#include <iostream>
+#include <sstream>
 
 namespace ss
 {
@@ -88,60 +89,60 @@ namespace ss
     parser.parse();
   }
 
-  Scanner::Scanner(std::string& src) noexcept: source(src), current(source.begin()), line(1) {}
+  Scanner::Scanner(std::string& src) noexcept: source(src), current(source.begin()), line(1), column(1) {}
 
   auto Scanner::scan() -> std::vector<Token>
   {
     std::vector<Token> tokens;
 
-    for (this->start = this->current; !this->is_at_end(); this->start = ++this->current) {
-      this->skip_whitespace();
+    for (this->skip_whitespace(); !this->is_at_end(); this->advance_then_skip_whitespace()) {
       char c = *this->start;
-      switch (*this->start) {
+
+      switch (c) {
         case '(': {
-          tokens.push_back(this->make_token(TokenType::LEFT_PAREN));
+          tokens.push_back(this->make_token(Token::Type::LEFT_PAREN));
         } break;
         case ')': {
-          tokens.push_back(this->make_token(TokenType::RIGHT_PAREN));
+          tokens.push_back(this->make_token(Token::Type::RIGHT_PAREN));
         } break;
         case '{': {
-          tokens.push_back(this->make_token(TokenType::LEFT_BRACE));
+          tokens.push_back(this->make_token(Token::Type::LEFT_BRACE));
         } break;
         case '}': {
-          tokens.push_back(this->make_token(TokenType::RIGHT_BRACE));
+          tokens.push_back(this->make_token(Token::Type::RIGHT_BRACE));
         } break;
         case ';': {
-          tokens.push_back(this->make_token(TokenType::SEMICOLON));
+          tokens.push_back(this->make_token(Token::Type::SEMICOLON));
         } break;
         case ',': {
-          tokens.push_back(this->make_token(TokenType::COMMA));
+          tokens.push_back(this->make_token(Token::Type::COMMA));
         } break;
         case '.': {
-          tokens.push_back(this->make_token(TokenType::DOT));
+          tokens.push_back(this->make_token(Token::Type::DOT));
         } break;
         case '-': {
-          tokens.push_back(this->make_token(TokenType::MINUS));
+          tokens.push_back(this->make_token(Token::Type::MINUS));
         } break;
         case '+': {
-          tokens.push_back(this->make_token(TokenType::PLUS));
+          tokens.push_back(this->make_token(Token::Type::PLUS));
         } break;
         case '/': {
-          tokens.push_back(this->make_token(TokenType::SLASH));
+          tokens.push_back(this->make_token(Token::Type::SLASH));
         } break;
         case '*': {
-          tokens.push_back(this->make_token(TokenType::STAR));
+          tokens.push_back(this->make_token(Token::Type::STAR));
         } break;
         case '!': {
-          tokens.push_back(this->make_token(this->advance_if_match('=') ? TokenType::BANG_EQUAL : TokenType::BANG));
+          tokens.push_back(this->make_token(this->advance_if_match('=') ? Token::Type::BANG_EQUAL : Token::Type::BANG));
         } break;
         case '=': {
-          tokens.push_back(this->make_token(this->advance_if_match('=') ? TokenType::EQUAL_EQUAL : TokenType::EQUAL));
+          tokens.push_back(this->make_token(this->advance_if_match('=') ? Token::Type::EQUAL_EQUAL : Token::Type::EQUAL));
         } break;
         case '<': {
-          tokens.push_back(this->make_token(this->advance_if_match('=') ? TokenType::LESS_EQUAL : TokenType::LESS));
+          tokens.push_back(this->make_token(this->advance_if_match('=') ? Token::Type::LESS_EQUAL : Token::Type::LESS));
         } break;
         case '>': {
-          tokens.push_back(this->make_token(this->advance_if_match('=') ? TokenType::GREATER_EQUAL : TokenType::GREATER));
+          tokens.push_back(this->make_token(this->advance_if_match('=') ? Token::Type::GREATER_EQUAL : Token::Type::GREATER));
         } break;
         case '"': {
           tokens.push_back(this->make_string());
@@ -153,24 +154,32 @@ namespace ss
             tokens.push_back(this->make_identifier());
           } else {
             std::stringstream ss;
-            ss << "invalid character '" << *this->start << "' on line " << this->line;
-            THROW_COMPILETIME_ERROR(ss.str());
+            ss << "invalid character '" << *this->start << '\'';
+            this->error(ss.str());
           }
         }
       }
     }
 
-    tokens.push_back(this->make_token(TokenType::END_OF_FILE));
+    tokens.push_back(this->make_token(Token::Type::END_OF_FILE));
 
     return tokens;
   }
 
-  auto Scanner::make_token(TokenType t) const noexcept -> Token
+  void Scanner::error(std::string msg) const
+  {
+    std::stringstream ss;
+    ss << this->line << ":" << this->column << " -> " << msg;
+    THROW_COMPILETIME_ERROR(ss.str());
+  }
+
+  auto Scanner::make_token(Token::Type t) const noexcept -> Token
   {
     Token token;
     token.type   = t;
     token.lexeme = std::string_view(this->start.base(), this->current - this->start);
     token.line   = this->line;
+    token.column = this->column;
 
     return token;
   }
@@ -185,15 +194,13 @@ namespace ss
     }
 
     if (this->is_at_end()) {
-      std::stringstream ss;
-      ss << "unterminated string on line " << this->line;
-      THROW_COMPILETIME_ERROR(ss.str());
+      this->error("unterminated string");
     }
 
     // advance past the leading '"'
     this->start++;
 
-    Token str = this->make_token(TokenType::STRING);
+    Token str = this->make_token(Token::Type::STRING);
 
     // advance past the closing '"'
     this->advance();
@@ -216,7 +223,7 @@ namespace ss
       }
     }
 
-    return this->make_token(TokenType::NUMBER);
+    return this->make_token(Token::Type::NUMBER);
   }
 
   auto Scanner::make_identifier() -> Token
@@ -228,63 +235,64 @@ namespace ss
     return this->make_token(this->identifier());
   }
 
-  auto Scanner::identifier() -> TokenType
+  auto Scanner::identifier() -> Token::Type
   {
     switch (*this->start) {
       case 'a': {
-        return this->check_keyword(1, 2, "nd", TokenType::AND);
+        return this->check_keyword(1, 2, "nd", Token::Type::AND);
       }
       case 'c': {
-        return this->check_keyword(1, 4, "lass", TokenType::CLASS);
+        return this->check_keyword(1, 4, "lass", Token::Type::CLASS);
       }
       case 'e': {
-        return this->check_keyword(1, 3, "lse", TokenType::ELSE);
+        return this->check_keyword(1, 3, "lse", Token::Type::ELSE);
       }
       case 'f': {
         switch (*(this->start + 1)) {
           case 'a': {
-            return this->check_keyword(2, 3, "lse", TokenType::FALSE);
+            return this->check_keyword(2, 3, "lse", Token::Type::FALSE);
           }
           case 'o': {
-            return this->check_keyword(2, 1, "r", TokenType::FOR);
+            return this->check_keyword(2, 1, "r", Token::Type::FOR);
           }
           case 'n': {
-            return this->check_keyword(2, 0, "", TokenType::FN);
+            return this->check_keyword(2, 0, "", Token::Type::FN);
           }
           default:
-            return TokenType::IDENTIFIER;
+            return Token::Type::IDENTIFIER;
         }
       }
       case 'i': {
-        return this->check_keyword(1, 1, "f", TokenType::IF);
+        return this->check_keyword(1, 1, "f", Token::Type::IF);
       }
       case 'l': {
-        return this->check_keyword(1, 2, "et", TokenType::LET);
+        return this->check_keyword(1, 2, "et", Token::Type::LET);
       }
       case 'n': {
-        return this->check_keyword(1, 2, "il", TokenType::NIL);
+        return this->check_keyword(1, 2, "il", Token::Type::NIL);
       }
       case 'o': {
-        return this->check_keyword(1, 1, "r", TokenType::OR);
+        return this->check_keyword(1, 1, "r", Token::Type::OR);
       }
       case 'p': {
-        return this->check_keyword(1, 4, "rint", TokenType::PRINT);
+        return this->check_keyword(1, 4, "rint", Token::Type::PRINT);
       }
       case 'r': {
-        return this->check_keyword(1, 5, "eturn", TokenType::RETURN);
+        return this->check_keyword(1, 5, "eturn", Token::Type::RETURN);
       }
       case 't': {
-        return this->check_keyword(1, 3, "rue", TokenType::TRUE);
+        return this->check_keyword(1, 3, "rue", Token::Type::TRUE);
       }
       case 'w': {
-        return this->check_keyword(1, 4, "hile", TokenType::WHILE);
+        return this->check_keyword(1, 4, "hile", Token::Type::WHILE);
       }
       default:
-        return TokenType::IDENTIFIER;
+        return Token::Type::IDENTIFIER;
     }
   }
 
-  auto Scanner::check_keyword(std::size_t start, std::size_t len, const char* rest, TokenType type) const noexcept -> TokenType
+  auto Scanner::check_keyword(std::size_t start, std::size_t len, const char* rest, Token::Type type) const noexcept
+   -> Token::Type
   {
     if (
      static_cast<std::size_t>(this->current - this->start) == start + len &&
@@ -292,7 +300,7 @@ namespace ss
       return type;
     }
 
-    return TokenType::IDENTIFIER;
+    return Token::Type::IDENTIFIER;
   }
 
   auto Scanner::is_at_end() const noexcept -> bool
@@ -339,6 +347,7 @@ namespace ss
         } break;
         case '\n': {
           this->line++;
+          this->column = 1;
           this->advance();
         } break;
         case '#': {
@@ -351,6 +360,13 @@ namespace ss
         }
       }
     }
+    this->start = this->current;
+  }
+
+  void Scanner::advance_then_skip_whitespace() noexcept
+  {
+    this->advance();
+    this->skip_whitespace();
   }
 
   auto Scanner::is_digit(char c) const noexcept -> bool
@@ -370,8 +386,6 @@ namespace ss
     for (this->iter = tokens.begin(); this->iter < tokens.end(); this->advance()) {
       this->expression();
     }
-
-    this->consume(TokenType::END_OF_FILE, "expected end of expression");
   }
 
   auto Parser::previous() const -> TokenIterator
@@ -384,7 +398,7 @@ namespace ss
     this->iter++;
   }
 
-  void Parser::consume(TokenType type, std::string err)
+  void Parser::consume(Token::Type type, std::string err)
   {
     if (this->iter->type == type) {
       this->advance();
@@ -396,7 +410,7 @@ namespace ss
   void Parser::error(TokenIterator tok, std::string msg) const
   {
     std::stringstream ss;
-    ss << tok->line << ": " << msg;
+    ss << tok->line << ":" << tok->column << " -> " << msg;
     THROW_COMPILETIME_ERROR(ss.str());
   }
 
@@ -416,8 +430,123 @@ namespace ss
 
     Value v = std::strtod(begin, &end);
 
-    this->chunk.write_constant(v, this->previous()->line);
+    this->chunk.write_constant(v, this->iter->line);
   }
 
-  void Parser::expression() {}
+  void Parser::parse_precedence(Precedence precedence)
+  {
+    this->advance();
+    ParseFn prefix_rule = this->get_rule(this->previous()->type).prefix;
+    if (prefix_rule == nullptr) {
+      this->error(this->previous(), "expected an expression");
+    }
+
+    prefix_rule(this);
+
+    while (static_cast<size_t>(precedence) <= static_cast<std::size_t>(this->get_rule(this->iter->type).precedence)) {
+      this->advance();
+      ParseFn infix_rule = this->get_rule(this->previous()->type).infix;
+      infix_rule(this);
+    }
+  }
+
+  auto Parser::get_rule(Token::Type t) const noexcept -> const ParseRule&
+  {
+    static const std::array<ParseRule, static_cast<std::size_t>(Token::Type::LAST)> rules = [this] {
+      std::array<ParseRule, static_cast<std::size_t>(Token::Type::LAST)> rules;
+      rules[static_cast<std::size_t>(Token::Type::LEFT_PAREN)]    = {&Parser::grouping, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::RIGHT_PAREN)]   = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::LEFT_BRACE)]    = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::RIGHT_BRACE)]   = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::COMMA)]         = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::DOT)]           = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::MINUS)]         = {&Parser::unary, &Parser::binary, Precedence::TERM};
+      rules[static_cast<std::size_t>(Token::Type::PLUS)]          = {nullptr, &Parser::binary, Precedence::TERM};
+      rules[static_cast<std::size_t>(Token::Type::SEMICOLON)]     = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::SLASH)]         = {nullptr, &Parser::binary, Precedence::FACTOR};
+      rules[static_cast<std::size_t>(Token::Type::STAR)]          = {nullptr, &Parser::binary, Precedence::FACTOR};
+      rules[static_cast<std::size_t>(Token::Type::BANG)]          = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::BANG_EQUAL)]    = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::EQUAL)]         = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::EQUAL_EQUAL)]   = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::GREATER)]       = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::GREATER_EQUAL)] = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::LESS)]          = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::LESS_EQUAL)]    = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::IDENTIFIER)]    = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::STRING)]        = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::NUMBER)]        = {&Parser::parse_number, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::AND)]           = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::CLASS)]         = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::ELSE)]          = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::FALSE)]         = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::FOR)]           = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::FN)]            = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::IF)]            = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::NIL)]           = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::OR)]            = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::PRINT)]         = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::RETURN)]        = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::TRUE)]          = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::LET)]           = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::WHILE)]         = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::ERROR)]         = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::END_OF_FILE)]   = {nullptr, nullptr, Precedence::NONE};
+
+      return rules;
+    }();
+
+    return rules[static_cast<std::size_t>(t)];
+  }
+
+  void Parser::expression()
+  {
+    this->parse_precedence(Precedence::ASSIGNMENT);
+  }
+
+  void Parser::grouping()
+  {
+    this->expression();
+    this->consume(Token::Type::RIGHT_PAREN, "expect ')' after expression");
+  }
+
+  void Parser::unary()
+  {
+    Token::Type operator_type = this->previous()->type;
+
+    this->parse_precedence(Precedence::UNARY);
+
+    switch (operator_type) {
+      case Token::Type::MINUS: {
+        this->chunk.write(Instruction{OpCode::NEGATE}, this->iter->line);
+      } break;
+      default:  // unreachable
+        this->error(this->previous(), "invalid unary operator");
+    }
+  }
+
+  void Parser::binary()
+  {
+    Token::Type operator_type = this->previous()->type;
+
+    const ParseRule& rule = this->get_rule(operator_type);
+    this->parse_precedence(static_cast<Precedence>(static_cast<std::size_t>(rule.precedence) + 1));
+
+    switch (operator_type) {
+      case Token::Type::PLUS: {
+        this->chunk.write(Instruction{OpCode::ADD}, this->previous()->line);
+      } break;
+      case Token::Type::MINUS: {
+        this->chunk.write(Instruction{OpCode::SUB}, this->previous()->line);
+      } break;
+      case Token::Type::STAR: {
+        this->chunk.write(Instruction{OpCode::MUL}, this->previous()->line);
+      } break;
+      case Token::Type::SLASH: {
+        this->chunk.write(Instruction{OpCode::DIV}, this->previous()->line);
+      } break;
+      default:  // unreachable
+        this->error(this->previous(), "invalid binary operator");
+    }
+  }
 }  // namespace ss
