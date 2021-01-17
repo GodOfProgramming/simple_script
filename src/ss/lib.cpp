@@ -69,6 +69,15 @@ namespace ss
         case OpCode::CONSTANT: {
           this->chunk->push_stack(this->chunk->constant_at(this->ip->modifying_bits));
         } break;
+        case OpCode::NIL: {
+          this->chunk->push_stack(Value());
+        } break;
+        case OpCode::TRUE: {
+          this->chunk->push_stack(Value(true));
+        } break;
+        case OpCode::FALSE: {
+          this->chunk->push_stack(Value(false));
+        } break;
         case OpCode::ADD: {
           Value b = this->chunk->pop_stack();
           Value a = this->chunk->pop_stack();
@@ -156,6 +165,15 @@ namespace ss
         this->config.write(" '", constant.to_string().c_str(), "'\n");
         this->config.reset_ostream();
       } break;
+      case OpCode::NIL: {
+        this->config.write_line(to_string(OpCode::NIL));
+      } break;
+      case OpCode::TRUE: {
+        this->config.write_line(to_string(OpCode::TRUE));
+      } break;
+      case OpCode::FALSE: {
+        this->config.write_line(to_string(OpCode::FALSE));
+      } break;
       case OpCode::ADD: {
         this->config.write_line(to_string(OpCode::ADD));
       } break;
@@ -167,6 +185,9 @@ namespace ss
       } break;
       case OpCode::DIV: {
         this->config.write_line(to_string(OpCode::DIV));
+      } break;
+      case OpCode::MOD: {
+        this->config.write_line(to_string(OpCode::MOD));
       } break;
       case OpCode::NEGATE: {
         this->config.write_line(to_string(OpCode::NEGATE));

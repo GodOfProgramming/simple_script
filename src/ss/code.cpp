@@ -461,21 +461,21 @@ namespace ss
   void Parser::parse_precedence(Precedence precedence)
   {
     this->advance();
-    ParseFn prefix_rule = this->get_rule(this->previous()->type).prefix;
+    ParseFn prefix_rule = this->rule_for(this->previous()->type).prefix;
     if (prefix_rule == nullptr) {
       this->error(this->previous(), "expected an expression");
     }
 
     prefix_rule(this);
 
-    while (static_cast<size_t>(precedence) <= static_cast<std::size_t>(this->get_rule(this->iter->type).precedence)) {
+    while (static_cast<size_t>(precedence) <= static_cast<std::size_t>(this->rule_for(this->iter->type).precedence)) {
       this->advance();
-      ParseFn infix_rule = this->get_rule(this->previous()->type).infix;
+      ParseFn infix_rule = this->rule_for(this->previous()->type).infix;
       infix_rule(this);
     }
   }
 
-  auto Parser::get_rule(Token::Type t) const noexcept -> const ParseRule&
+  auto Parser::rule_for(Token::Type t) const noexcept -> const ParseRule&
   {
     static const std::array<ParseRule, static_cast<std::size_t>(Token::Type::LAST)> rules = [this] {
       std::array<ParseRule, static_cast<std::size_t>(Token::Type::LAST)> rules;
@@ -505,7 +505,7 @@ namespace ss
       rules[static_cast<std::size_t>(Token::Type::AND)]           = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::CLASS)]         = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::ELSE)]          = {nullptr, nullptr, Precedence::NONE};
-      rules[static_cast<std::size_t>(Token::Type::FALSE)]         = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::FALSE)]         = {&Parser::literal, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::FOR)]           = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::FN)]            = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::IF)]            = {nullptr, nullptr, Precedence::NONE};
@@ -513,7 +513,7 @@ namespace ss
       rules[static_cast<std::size_t>(Token::Type::OR)]            = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::PRINT)]         = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::RETURN)]        = {nullptr, nullptr, Precedence::NONE};
-      rules[static_cast<std::size_t>(Token::Type::TRUE)]          = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::TRUE)]          = {&Parser::literal, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::LET)]           = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::WHILE)]         = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::ERROR)]         = {nullptr, nullptr, Precedence::NONE};
@@ -544,7 +544,7 @@ namespace ss
 
     switch (operator_type) {
       case Token::Type::MINUS: {
-        this->chunk.write(Instruction{OpCode::NEGATE}, this->iter->line);
+        this->chunk.write(Instruction{OpCode::NEGATE}, this->previous()->line);
       } break;
       default:  // unreachable
         this->error(this->previous(), "invalid unary operator");
@@ -555,27 +555,44 @@ namespace ss
   {
     Token::Type operator_type = this->previous()->type;
 
-    const ParseRule& rule = this->get_rule(operator_type);
+    const ParseRule& rule = this->rule_for(operator_type);
     this->parse_precedence(static_cast<Precedence>(static_cast<std::size_t>(rule.precedence) + 1));
 
     switch (operator_type) {
       case Token::Type::PLUS: {
-        this->chunk.write(Instruction{OpCode::ADD}, this->previous()->line);
+        this->emit_instruction(Instruction{OpCode::ADD});
       } break;
       case Token::Type::MINUS: {
-        this->chunk.write(Instruction{OpCode::SUB}, this->previous()->line);
+        this->emit_instruction(Instruction{OpCode::SUB});
       } break;
       case Token::Type::STAR: {
-        this->chunk.write(Instruction{OpCode::MUL}, this->previous()->line);
+        this->emit_instruction(Instruction{OpCode::MUL});
       } break;
       case Token::Type::SLASH: {
-        this->chunk.write(Instruction{OpCode::DIV}, this->previous()->line);
+        this->emit_instruction(Instruction{OpCode::DIV});
       } break;
       case Token::Type::MODULUS: {
-        this->chunk.write(Instruction{OpCode::MOD}, this->previous()->line);
+        this->emit_instruction(Instruction{OpCode::MOD});
       } break;
       default:  // unreachable
         this->error(this->previous(), "invalid binary operator");
+    }
+  }
+
+  void Parser::literal()
+  {
+    switch (this->previous()->type) {
+      case Token::Type::NIL: {
+        this->emit_instruction(Instruction{OpCode::NIL});
+      } break;
+      case Token::Type::TRUE: {
+        this->emit_instruction(Instruction{OpCode::TRUE});
+      } break;
+      case Token::Type::FALSE: {
+        this->emit_instruction(Instruction{OpCode::FALSE});
+      } break;
+      default:  // unreachable
+        THROW_COMPILETIME_ERROR("invalid literal type");
     }
   }
 }  // namespace ss

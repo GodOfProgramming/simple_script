@@ -12,6 +12,9 @@ namespace ss
   {
     NO_OP,
     CONSTANT,
+    NIL,
+    TRUE,
+    FALSE,
     ADD,
     SUB,
     MUL,
@@ -36,6 +39,15 @@ namespace ss
       case OpCode::CONSTANT: {
         return "CONSTANT";
       }
+      case OpCode::NIL: {
+        return "NIL";
+      } break;
+      case OpCode::TRUE: {
+        return "TRUE";
+      } break;
+      case OpCode::FALSE: {
+        return "FALSE";
+      } break;
       case OpCode::ADD: {
         return "ADD";
       }
@@ -223,6 +235,8 @@ namespace ss
     TokenIterator iter;
     Chunk&        chunk;
 
+    void write_instruction(Instruction i);
+
     auto previous() const -> TokenIterator;
     void advance() noexcept;
     void consume(Token::Type type, std::string err);
@@ -231,11 +245,12 @@ namespace ss
 
     void parse_number();
     void parse_precedence(Precedence p);
-    auto get_rule(Token::Type t) const noexcept -> const ParseRule&;
+    auto rule_for(Token::Type t) const noexcept -> const ParseRule&;
 
     void expression();
     void grouping();
     void unary();
     void binary();
+    void literal();
   };
 }  // namespace ss
