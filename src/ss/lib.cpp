@@ -89,6 +89,11 @@ namespace ss
           Value a = this->chunk->pop_stack();
           this->chunk->push_stack(a / b);
         } break;
+        case OpCode::MOD: {
+          Value b = this->chunk->pop_stack();
+          Value a = this->chunk->pop_stack();
+          this->chunk->push_stack(a % b);
+        } break;
         case OpCode::NEGATE: {
           this->chunk->push_stack(-this->chunk->pop_stack());
         } break;

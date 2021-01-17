@@ -43,6 +43,7 @@ namespace ss
     auto operator-(const Value& other) const -> Value;
     auto operator*(const Value& other) const -> Value;
     auto operator/(const Value& other) const -> Value;
+    auto operator%(const Value& other) const -> Value;
 
     auto operator=(NilType v) noexcept -> Value&;
     auto operator=(NumberType v) noexcept -> Value&;

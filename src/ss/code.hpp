@@ -16,6 +16,7 @@ namespace ss
     SUB,
     MUL,
     DIV,
+    MOD,
     NEGATE,
     RETURN,
   };
@@ -37,16 +38,19 @@ namespace ss
       }
       case OpCode::ADD: {
         return "ADD";
-      } break;
+      }
       case OpCode::SUB: {
         return "SUB";
-      } break;
+      }
       case OpCode::MUL: {
         return "MUL";
-      } break;
+      }
       case OpCode::DIV: {
         return "DIV";
-      } break;
+      }
+      case OpCode::MOD: {
+        return "MOD";
+      }
       case OpCode::NEGATE: {
         return "NEGATE";
       }
@@ -70,11 +74,12 @@ namespace ss
       RIGHT_BRACE,
       COMMA,
       DOT,
-      MINUS,
-      PLUS,
       SEMICOLON,
-      SLASH,
+      PLUS,
+      MINUS,
       STAR,
+      SLASH,
+      MODULUS,
 
       // One or two character tokens.
       BANG,

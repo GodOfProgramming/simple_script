@@ -113,26 +113,29 @@ namespace ss
         case '}': {
           t = Token::Type::RIGHT_BRACE;
         } break;
-        case ';': {
-          t = Token::Type::SEMICOLON;
-        } break;
         case ',': {
           t = Token::Type::COMMA;
         } break;
         case '.': {
           t = Token::Type::DOT;
         } break;
-        case '-': {
-          t = Token::Type::MINUS;
+        case ';': {
+          t = Token::Type::SEMICOLON;
         } break;
         case '+': {
           t = Token::Type::PLUS;
         } break;
-        case '/': {
-          t = Token::Type::SLASH;
+        case '-': {
+          t = Token::Type::MINUS;
         } break;
         case '*': {
           t = Token::Type::STAR;
+        } break;
+        case '/': {
+          t = Token::Type::SLASH;
+        } break;
+        case '%': {
+          t = Token::Type::MODULUS;
         } break;
         case '!': {
           t = this->advance_if_match('=') ? Token::Type::BANG_EQUAL : Token::Type::BANG;
@@ -482,11 +485,12 @@ namespace ss
       rules[static_cast<std::size_t>(Token::Type::RIGHT_BRACE)]   = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::COMMA)]         = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::DOT)]           = {nullptr, nullptr, Precedence::NONE};
-      rules[static_cast<std::size_t>(Token::Type::MINUS)]         = {&Parser::unary, &Parser::binary, Precedence::TERM};
-      rules[static_cast<std::size_t>(Token::Type::PLUS)]          = {nullptr, &Parser::binary, Precedence::TERM};
       rules[static_cast<std::size_t>(Token::Type::SEMICOLON)]     = {nullptr, nullptr, Precedence::NONE};
-      rules[static_cast<std::size_t>(Token::Type::SLASH)]         = {nullptr, &Parser::binary, Precedence::FACTOR};
+      rules[static_cast<std::size_t>(Token::Type::PLUS)]          = {nullptr, &Parser::binary, Precedence::TERM};
+      rules[static_cast<std::size_t>(Token::Type::MINUS)]         = {&Parser::unary, &Parser::binary, Precedence::TERM};
       rules[static_cast<std::size_t>(Token::Type::STAR)]          = {nullptr, &Parser::binary, Precedence::FACTOR};
+      rules[static_cast<std::size_t>(Token::Type::SLASH)]         = {nullptr, &Parser::binary, Precedence::FACTOR};
+      rules[static_cast<std::size_t>(Token::Type::MODULUS)]       = {nullptr, &Parser::binary, Precedence::FACTOR};
       rules[static_cast<std::size_t>(Token::Type::BANG)]          = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::BANG_EQUAL)]    = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::EQUAL)]         = {nullptr, nullptr, Precedence::NONE};
@@ -566,6 +570,9 @@ namespace ss
       } break;
       case Token::Type::SLASH: {
         this->chunk.write(Instruction{OpCode::DIV}, this->previous()->line);
+      } break;
+      case Token::Type::MODULUS: {
+        this->chunk.write(Instruction{OpCode::MOD}, this->previous()->line);
       } break;
       default:  // unreachable
         this->error(this->previous(), "invalid binary operator");

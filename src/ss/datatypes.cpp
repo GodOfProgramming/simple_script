@@ -1,6 +1,7 @@
 #include "datatypes.hpp"
 #include "exceptions.hpp"
 #include <sstream>
+#include <cmath>
 
 namespace ss
 {
@@ -185,6 +186,27 @@ namespace ss
           case Type::Number: {
             auto b = std::get<NumberType>(other.value);
             return Value(a / b);
+          }
+          default: {
+            THROW_RUNTIME_ERROR("unable to div invalid types");
+          }
+        }
+      }
+      default: {
+        THROW_RUNTIME_ERROR("unable to div invalid types");
+      }
+    }
+  }
+
+  auto Value::operator%(const Value& other) const -> Value
+  {
+    switch (this->type()) {
+      case Type::Number: {
+        auto a = std::get<NumberType>(this->value);
+        switch (other.type()) {
+          case Type::Number: {
+            auto b = std::get<NumberType>(other.value);
+            return Value(std::fmod(a, b));
           }
           default: {
             THROW_RUNTIME_ERROR("unable to div invalid types");
