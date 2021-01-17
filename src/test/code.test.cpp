@@ -25,7 +25,7 @@ TEST(Chunk, METHOD(write_constant, can_write_constant))
   Chunk chunk;
 
   chunk.write_constant(Value(), 1);
-  chunk.write_constant(Value(1), 1);
+  chunk.write_constant(Value(1.0), 1);
   chunk.write_constant(Value("str"), 2);
 
   EXPECT_EQ(chunk.line_at(0), 1);
@@ -33,7 +33,7 @@ TEST(Chunk, METHOD(write_constant, can_write_constant))
   EXPECT_EQ(chunk.line_at(2), 2);
 
   EXPECT_EQ(chunk.constant_at(0), Value());
-  EXPECT_EQ(chunk.constant_at(1), Value(1));
+  EXPECT_EQ(chunk.constant_at(1), Value(1.0));
   EXPECT_EQ(chunk.constant_at(2), Value("str"));
 }
 
@@ -43,13 +43,13 @@ TEST(Chunk, METHOD(push_stack__pop_stack, can_push_onto_stack_and_pop)) {
   EXPECT_TRUE(chunk.stack_empty());
 
   chunk.push_stack(Value());
-  chunk.push_stack(Value(1));
+  chunk.push_stack(Value(1.0));
   chunk.push_stack(Value("str"));
 
   EXPECT_FALSE(chunk.stack_empty());
 
   EXPECT_EQ(chunk.pop_stack(), Value("str"));
-  EXPECT_EQ(chunk.pop_stack(), Value(1));
+  EXPECT_EQ(chunk.pop_stack(), Value(1.0));
   EXPECT_EQ(chunk.pop_stack(), Value());
 
   EXPECT_TRUE(chunk.stack_empty());
@@ -59,13 +59,17 @@ using ss::OpCode;
 
 TEST(OpCode, METHOD(to_string, returns_the_right_string))
 {
-  EXPECT_STREQ(to_string(OpCode::NO_OP), "NOOP");
-  EXPECT_STREQ(to_string(OpCode::CONSTANT), "CONSTANT");
-  EXPECT_STREQ(to_string(OpCode::ADD), "ADD");
-  EXPECT_STREQ(to_string(OpCode::SUB), "SUB");
-  EXPECT_STREQ(to_string(OpCode::MUL), "MUL");
-  EXPECT_STREQ(to_string(OpCode::DIV), "DIV");
-  EXPECT_STREQ(to_string(OpCode::NEGATE), "NEGATE");
-  EXPECT_STREQ(to_string(OpCode::RETURN), "RETURN");
-  EXPECT_STREQ(to_string(static_cast<OpCode>(-1)), "UNKNOWN");
+  EXPECT_STREQ(ss::to_string(OpCode::NO_OP), "NOOP");
+  EXPECT_STREQ(ss::to_string(OpCode::CONSTANT), "CONSTANT");
+  EXPECT_STREQ(ss::to_string(OpCode::NIL), "NIL");
+  EXPECT_STREQ(ss::to_string(OpCode::TRUE), "TRUE");
+  EXPECT_STREQ(ss::to_string(OpCode::FALSE), "FALSE");
+  EXPECT_STREQ(ss::to_string(OpCode::ADD), "ADD");
+  EXPECT_STREQ(ss::to_string(OpCode::SUB), "SUB");
+  EXPECT_STREQ(ss::to_string(OpCode::MUL), "MUL");
+  EXPECT_STREQ(ss::to_string(OpCode::DIV), "DIV");
+  EXPECT_STREQ(ss::to_string(OpCode::MOD), "MOD");
+  EXPECT_STREQ(ss::to_string(OpCode::NEGATE), "NEGATE");
+  EXPECT_STREQ(ss::to_string(OpCode::RETURN), "RETURN");
+  EXPECT_STREQ(ss::to_string(static_cast<OpCode>(-1)), "UNKNOWN");
 }

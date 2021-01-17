@@ -1,6 +1,7 @@
 target_sources(${EXE_TEST} PRIVATE
-  lib.test.cpp
+  cfg.test.cpp
   code.test.cpp
   datatypes.test.cpp
   exceptions.test.cpp
+  lib.test.cpp
 )

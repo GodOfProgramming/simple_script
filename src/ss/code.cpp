@@ -491,7 +491,7 @@ namespace ss
       rules[static_cast<std::size_t>(Token::Type::STAR)]          = {nullptr, &Parser::binary, Precedence::FACTOR};
       rules[static_cast<std::size_t>(Token::Type::SLASH)]         = {nullptr, &Parser::binary, Precedence::FACTOR};
       rules[static_cast<std::size_t>(Token::Type::MODULUS)]       = {nullptr, &Parser::binary, Precedence::FACTOR};
-      rules[static_cast<std::size_t>(Token::Type::BANG)]          = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::BANG)]          = {&Parser::unary, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::BANG_EQUAL)]    = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::EQUAL)]         = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::EQUAL_EQUAL)]   = {nullptr, nullptr, Precedence::NONE};
@@ -543,8 +543,11 @@ namespace ss
     this->parse_precedence(Precedence::UNARY);
 
     switch (operator_type) {
+      case Token::Type::BANG: {
+        this->emit_instruction(Instruction{OpCode::NOT});
+      } break;
       case Token::Type::MINUS: {
-        this->chunk.write(Instruction{OpCode::NEGATE}, this->previous()->line);
+        this->emit_instruction(Instruction{OpCode::NEGATE});
       } break;
       default:  // unreachable
         this->error(this->previous(), "invalid unary operator");

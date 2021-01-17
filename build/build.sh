@@ -8,7 +8,7 @@ while getopts 'habtg' flag; do
 	case "$flag" in
 		h)
 			echo 'build.sh [flags]'
-			exit 0 
+			exit 0
 			;;
 		a)
 			build=1
@@ -32,14 +32,13 @@ while getopts 'habtg' flag; do
 done
 
 if [ $build -eq 1 ]; then
-	make || exit $?
+	make -j$(($(nproc) - 1)) || exit $?
 fi
 
 if [ $run_tests -eq 1 ]; then
-	SimpleScriptTest || exit $?
+	SimpleScriptTest
 fi
 
 if [ $gen_coverage -eq 1 ]; then
 	gcovr -r ../. --html --html-details -o coverage.html || exit $?
 fi
-

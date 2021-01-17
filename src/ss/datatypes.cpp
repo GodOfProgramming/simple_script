@@ -7,18 +7,31 @@ namespace ss
 {
   Value::NilType Value::nil;
 
-  Value::Value(): value(NilType()) {}
+  Value::Value(): value(nil) {}
+
+  Value::Value(BoolType v): value(v) {}
 
   Value::Value(NumberType v): value(v) {}
 
   Value::Value(StringType v): value(v) {}
+
+  Value::Value(const char* v): Value(std::string(v)) {}
+
+  auto Value::boolean() const -> BoolType
+  {
+    if (this->is_type(Type::Bool)) {
+      return std::get<BoolType>(this->value);
+    } else {
+      return BoolType();
+    }
+  }
 
   auto Value::number() const -> NumberType
   {
     if (this->is_type(Type::Number)) {
       return std::get<NumberType>(this->value);
     } else {
-      return 0;
+      return NumberType();
     }
   }
 
@@ -27,7 +40,22 @@ namespace ss
     if (this->is_type(Type::String)) {
       return std::get<StringType>(this->value);
     } else {
-      return std::string();
+      return StringType();
+    }
+  }
+
+  auto Value::truthy() const -> bool
+  {
+    switch (this->type()) {
+      case Type::Nil: {
+        return false;
+      }
+      case Type::Bool: {
+        return this->boolean();
+      }
+      default: {
+        return true;
+      }
     }
   }
 
@@ -36,6 +64,13 @@ namespace ss
     switch (this->type()) {
       case Type::Nil: {
         return std::string("nil");
+      }
+      case Type::Bool: {
+        if (std::get<BoolType>(this->value)) {
+          return std::string("true");
+        } else {
+          return std::string("false");
+        }
       }
       case Type::Number: {
         std::stringstream ss;
@@ -57,6 +92,18 @@ namespace ss
     switch (this->type()) {
       case Type::Number: {
         return Value(-std::get<NumberType>(this->value));
+      }
+      default: {
+        THROW_RUNTIME_ERROR("negation on invalid type");
+      }
+    }
+  }
+
+  auto Value::operator!() const -> Value
+  {
+    switch (this->type()) {
+      case Type::Bool: {
+        return Value(!std::get<BoolType>(this->value));
       }
       default: {
         THROW_RUNTIME_ERROR("negation on invalid type");
@@ -225,6 +272,12 @@ namespace ss
     return *this;
   }
 
+  auto Value::operator=(BoolType v) noexcept -> Value&
+  {
+    this->value = v;
+    return *this;
+  }
+
   auto Value::operator=(NumberType v) noexcept -> Value&
   {
     this->value = v;
@@ -235,6 +288,11 @@ namespace ss
   {
     this->value = v;
     return *this;
+  }
+
+  auto Value::operator=(const char* v) noexcept -> Value&
+  {
+    return *this = StringType(v);
   }
 
   auto Value::operator==(const Value& other) const noexcept -> bool

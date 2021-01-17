@@ -1,3 +1,3 @@
 #pragma once
 
-#define METHOD(f, name) f##name
+#define METHOD(f, name) f##__##name

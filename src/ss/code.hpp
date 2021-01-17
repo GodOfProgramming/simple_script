@@ -20,6 +20,7 @@ namespace ss
     MUL,
     DIV,
     MOD,
+    NOT,
     NEGATE,
     RETURN,
   };
@@ -62,6 +63,9 @@ namespace ss
       }
       case OpCode::MOD: {
         return "MOD";
+      }
+      case OpCode::NOT: {
+        return "NOT";
       }
       case OpCode::NEGATE: {
         return "NEGATE";
