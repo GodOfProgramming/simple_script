@@ -492,13 +492,13 @@ namespace ss
       rules[static_cast<std::size_t>(Token::Type::SLASH)]         = {nullptr, &Parser::binary, Precedence::FACTOR};
       rules[static_cast<std::size_t>(Token::Type::MODULUS)]       = {nullptr, &Parser::binary, Precedence::FACTOR};
       rules[static_cast<std::size_t>(Token::Type::BANG)]          = {&Parser::unary, nullptr, Precedence::NONE};
-      rules[static_cast<std::size_t>(Token::Type::BANG_EQUAL)]    = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::BANG_EQUAL)]    = {nullptr, &Parser::binary, Precedence::EQUALITY};
       rules[static_cast<std::size_t>(Token::Type::EQUAL)]         = {nullptr, nullptr, Precedence::NONE};
-      rules[static_cast<std::size_t>(Token::Type::EQUAL_EQUAL)]   = {nullptr, nullptr, Precedence::NONE};
-      rules[static_cast<std::size_t>(Token::Type::GREATER)]       = {nullptr, nullptr, Precedence::NONE};
-      rules[static_cast<std::size_t>(Token::Type::GREATER_EQUAL)] = {nullptr, nullptr, Precedence::NONE};
-      rules[static_cast<std::size_t>(Token::Type::LESS)]          = {nullptr, nullptr, Precedence::NONE};
-      rules[static_cast<std::size_t>(Token::Type::LESS_EQUAL)]    = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::EQUAL_EQUAL)]   = {nullptr, &Parser::binary, Precedence::EQUALITY};
+      rules[static_cast<std::size_t>(Token::Type::GREATER)]       = {nullptr, &Parser::binary, Precedence::COMPARISON};
+      rules[static_cast<std::size_t>(Token::Type::GREATER_EQUAL)] = {nullptr, &Parser::binary, Precedence::COMPARISON};
+      rules[static_cast<std::size_t>(Token::Type::LESS)]          = {nullptr, &Parser::binary, Precedence::COMPARISON};
+      rules[static_cast<std::size_t>(Token::Type::LESS_EQUAL)]    = {nullptr, &Parser::binary, Precedence::COMPARISON};
       rules[static_cast<std::size_t>(Token::Type::IDENTIFIER)]    = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::STRING)]        = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::NUMBER)]        = {&Parser::parse_number, nullptr, Precedence::NONE};
@@ -562,6 +562,24 @@ namespace ss
     this->parse_precedence(static_cast<Precedence>(static_cast<std::size_t>(rule.precedence) + 1));
 
     switch (operator_type) {
+      case Token::Type::EQUAL_EQUAL: {
+        this->emit_instruction(Instruction{OpCode::EQUAL});
+      } break;
+      case Token::Type::BANG_EQUAL: {
+        this->emit_instruction(Instruction{OpCode::NOT_EQUAL});
+      } break;
+      case Token::Type::GREATER: {
+        this->emit_instruction(Instruction{OpCode::GREATER});
+      } break;
+      case Token::Type::GREATER_EQUAL: {
+        this->emit_instruction(Instruction{OpCode::GREATER_EQUAL});
+      } break;
+      case Token::Type::LESS: {
+        this->emit_instruction(Instruction{OpCode::LESS});
+      } break;
+      case Token::Type::LESS_EQUAL: {
+        this->emit_instruction(Instruction{OpCode::LESS_EQUAL});
+      } break;
       case Token::Type::PLUS: {
         this->emit_instruction(Instruction{OpCode::ADD});
       } break;

@@ -300,6 +300,31 @@ namespace ss
     return this->value == other.value;
   }
 
+  auto Value::operator!=(const Value& other) const noexcept -> bool
+  {
+    return this->value != other.value;
+  }
+
+  auto Value::operator>(const Value& other) const noexcept -> bool
+  {
+    return this->value > other.value;
+  }
+
+  auto Value::operator>=(const Value& other) const noexcept -> bool
+  {
+    return this->value >= other.value;
+  }
+
+  auto Value::operator<(const Value& other) const noexcept -> bool
+  {
+    return this->value < other.value;
+  }
+
+  auto Value::operator<=(const Value& other) const noexcept -> bool
+  {
+    return this->value < other.value;
+  }
+
   auto Value::type() const noexcept -> Type
   {
     return static_cast<Type>(this->value.index());

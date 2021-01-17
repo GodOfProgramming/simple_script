@@ -18,13 +18,38 @@ namespace ss
 
     struct NilType
     {
-      constexpr auto operator==(const NilType&) const -> bool
+      constexpr auto operator==(const NilType&) const noexcept -> bool
       {
         return true;
       }
+
+      constexpr auto operator!=(const NilType&) const noexcept -> bool
+      {
+        return false;
+      }
+
+      constexpr auto operator>(const NilType) const noexcept -> bool
+      {
+        return false;
+      }
+
+      constexpr auto operator>=(const NilType) const noexcept -> bool
+      {
+        return false;
+      }
+
+      constexpr auto operator<(const NilType) const noexcept -> bool
+      {
+        return false;
+      }
+
+      constexpr auto operator<=(const NilType) const noexcept -> bool
+      {
+        return false;
+      }
     };
 
-    using BoolType = bool;
+    using BoolType   = bool;
     using NumberType = double;
     using StringType = std::string;
 
@@ -60,6 +85,11 @@ namespace ss
     auto operator=(const char* v) noexcept -> Value&;
 
     auto operator==(const Value& other) const noexcept -> bool;
+    auto operator!=(const Value& other) const noexcept -> bool;
+    auto operator>(const Value& other) const noexcept -> bool;
+    auto operator>=(const Value& other) const noexcept -> bool;
+    auto operator<(const Value& other) const noexcept -> bool;
+    auto operator<=(const Value& other) const noexcept -> bool;
 
     static NilType nil;
 

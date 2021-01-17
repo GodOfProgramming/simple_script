@@ -48,3 +48,12 @@ _deps
 SimpleScript
 SimpleScriptTest
 coverage.*
+
+# Vim
+*.swp
+
+# Node
+**/node_modules/*
+
+# VSCode extensions
+*.vsix

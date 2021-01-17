@@ -78,6 +78,36 @@ namespace ss
         case OpCode::FALSE: {
           this->chunk->push_stack(Value(false));
         } break;
+        case OpCode::EQUAL: {
+          Value b = this->chunk->pop_stack();
+          Value a = this->chunk->pop_stack();
+          this->chunk->push_stack(a == b);
+        } break;
+        case OpCode::NOT_EQUAL: {
+          Value b = this->chunk->pop_stack();
+          Value a = this->chunk->pop_stack();
+          this->chunk->push_stack(a != b);
+        } break;
+        case OpCode::GREATER: {
+          Value b = this->chunk->pop_stack();
+          Value a = this->chunk->pop_stack();
+          this->chunk->push_stack(a > b);
+        } break;
+        case OpCode::GREATER_EQUAL: {
+          Value b = this->chunk->pop_stack();
+          Value a = this->chunk->pop_stack();
+          this->chunk->push_stack(a >= b);
+        } break;
+        case OpCode::LESS: {
+          Value b = this->chunk->pop_stack();
+          Value a = this->chunk->pop_stack();
+          this->chunk->push_stack(a < b);
+        } break;
+        case OpCode::LESS_EQUAL: {
+          Value b = this->chunk->pop_stack();
+          Value a = this->chunk->pop_stack();
+          this->chunk->push_stack(a <= b);
+        } break;
         case OpCode::ADD: {
           Value b = this->chunk->pop_stack();
           Value a = this->chunk->pop_stack();
@@ -123,6 +153,8 @@ namespace ss
       }
       this->ip++;
     }
+
+    this->print_stack();
   }
 
   void VM::interpret(Chunk& chunk)
@@ -177,6 +209,24 @@ namespace ss
       case OpCode::FALSE: {
         this->config.write_line(to_string(OpCode::FALSE));
       } break;
+      case OpCode::EQUAL: {
+        this->config.write_line(to_string(OpCode::EQUAL));
+      } break;
+      case OpCode::NOT_EQUAL: {
+        this->config.write_line(to_string(OpCode::NOT_EQUAL));
+      } break;
+      case OpCode::GREATER: {
+        this->config.write_line(to_string(OpCode::GREATER));
+      } break;
+      case OpCode::GREATER_EQUAL: {
+        this->config.write_line(to_string(OpCode::GREATER_EQUAL));
+      } break;
+      case OpCode::LESS: {
+        this->config.write_line(to_string(OpCode::LESS));
+      } break;
+      case OpCode::LESS_EQUAL: {
+        this->config.write_line(to_string(OpCode::LESS_EQUAL));
+      } break;
       case OpCode::ADD: {
         this->config.write_line(to_string(OpCode::ADD));
       } break;
@@ -194,6 +244,9 @@ namespace ss
       } break;
       case OpCode::NEGATE: {
         this->config.write_line(to_string(OpCode::NEGATE));
+      } break;
+      case OpCode::NOT: {
+        this->config.write_line(to_string(OpCode::NOT));
       } break;
       case OpCode::RETURN: {
         this->config.write_line(to_string(OpCode::RETURN));

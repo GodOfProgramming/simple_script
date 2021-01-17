@@ -15,6 +15,12 @@ namespace ss
     NIL,
     TRUE,
     FALSE,
+    EQUAL,
+    NOT_EQUAL,
+    GREATER,
+    GREATER_EQUAL,
+    LESS,
+    LESS_EQUAL,
     ADD,
     SUB,
     MUL,
@@ -42,13 +48,31 @@ namespace ss
       }
       case OpCode::NIL: {
         return "NIL";
-      } break;
+      }
       case OpCode::TRUE: {
         return "TRUE";
-      } break;
+      }
       case OpCode::FALSE: {
         return "FALSE";
-      } break;
+      }
+      case OpCode::EQUAL: {
+        return "EQUAL";
+      }
+      case OpCode::NOT_EQUAL: {
+        return "NOT_EQUAL";
+      }
+      case OpCode::GREATER: {
+        return "GREATER";
+      }
+      case OpCode::GREATER_EQUAL: {
+        return "GREATER_EQUAL";
+      }
+      case OpCode::LESS: {
+        return "LESS";
+      }
+      case OpCode::LESS_EQUAL: {
+        return "LESS_EQUAL";
+      }
       case OpCode::ADD: {
         return "ADD";
       }
