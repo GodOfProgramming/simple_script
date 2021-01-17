@@ -174,7 +174,6 @@ namespace ss
     auto advance() noexcept -> char;
     auto advance_if_match(char expected) noexcept -> bool;
     void skip_whitespace() noexcept;
-    void advance_then_skip_whitespace() noexcept;
     auto is_digit(char c) const noexcept -> bool;
     auto is_alpha(char c) const noexcept -> bool;
   };

@@ -95,63 +95,66 @@ namespace ss
   {
     std::vector<Token> tokens;
 
-    for (this->skip_whitespace(); !this->is_at_end(); this->advance_then_skip_whitespace()) {
+    for (this->skip_whitespace(); !this->is_at_end(); this->skip_whitespace()) {
       char c = *this->start;
+
+      Token::Type t;
 
       switch (c) {
         case '(': {
-          tokens.push_back(this->make_token(Token::Type::LEFT_PAREN));
+          t = Token::Type::LEFT_PAREN;
         } break;
         case ')': {
-          tokens.push_back(this->make_token(Token::Type::RIGHT_PAREN));
+          t = Token::Type::RIGHT_PAREN;
         } break;
         case '{': {
-          tokens.push_back(this->make_token(Token::Type::LEFT_BRACE));
+          t = Token::Type::LEFT_BRACE;
         } break;
         case '}': {
-          tokens.push_back(this->make_token(Token::Type::RIGHT_BRACE));
+          t = Token::Type::RIGHT_BRACE;
         } break;
         case ';': {
-          tokens.push_back(this->make_token(Token::Type::SEMICOLON));
+          t = Token::Type::SEMICOLON;
         } break;
         case ',': {
-          tokens.push_back(this->make_token(Token::Type::COMMA));
+          t = Token::Type::COMMA;
         } break;
         case '.': {
-          tokens.push_back(this->make_token(Token::Type::DOT));
+          t = Token::Type::DOT;
         } break;
         case '-': {
-          tokens.push_back(this->make_token(Token::Type::MINUS));
+          t = Token::Type::MINUS;
         } break;
         case '+': {
-          tokens.push_back(this->make_token(Token::Type::PLUS));
+          t = Token::Type::PLUS;
         } break;
         case '/': {
-          tokens.push_back(this->make_token(Token::Type::SLASH));
+          t = Token::Type::SLASH;
         } break;
         case '*': {
-          tokens.push_back(this->make_token(Token::Type::STAR));
+          t = Token::Type::STAR;
         } break;
         case '!': {
-          tokens.push_back(this->make_token(this->advance_if_match('=') ? Token::Type::BANG_EQUAL : Token::Type::BANG));
+          t = this->advance_if_match('=') ? Token::Type::BANG_EQUAL : Token::Type::BANG;
         } break;
         case '=': {
-          tokens.push_back(this->make_token(this->advance_if_match('=') ? Token::Type::EQUAL_EQUAL : Token::Type::EQUAL));
+          t = this->advance_if_match('=') ? Token::Type::EQUAL_EQUAL : Token::Type::EQUAL;
         } break;
         case '<': {
-          tokens.push_back(this->make_token(this->advance_if_match('=') ? Token::Type::LESS_EQUAL : Token::Type::LESS));
+          t = this->advance_if_match('=') ? Token::Type::LESS_EQUAL : Token::Type::LESS;
         } break;
         case '>': {
-          tokens.push_back(this->make_token(this->advance_if_match('=') ? Token::Type::GREATER_EQUAL : Token::Type::GREATER));
+          t = this->advance_if_match('=') ? Token::Type::GREATER_EQUAL : Token::Type::GREATER;
         } break;
         case '"': {
+          t = Token::Type::STRING;
           tokens.push_back(this->make_string());
         } break;
         default: {
           if (this->is_digit(c)) {
-            tokens.push_back(this->make_number());
+            t = Token::Type::NUMBER;
           } else if (this->is_alpha(c)) {
-            tokens.push_back(this->make_identifier());
+            t = Token::Type::IDENTIFIER;
           } else {
             std::stringstream ss;
             ss << "invalid character '" << *this->start << '\'';
@@ -159,6 +162,27 @@ namespace ss
           }
         }
       }
+
+      this->advance();
+
+      Token token;
+
+      switch (t) {
+        case Token::Type::STRING: {
+          token = this->make_string();
+        } break;
+        case Token::Type::NUMBER: {
+          token = this->make_number();
+        } break;
+        case Token::Type::IDENTIFIER: {
+          token = this->make_identifier();
+        } break;
+        default: {
+          token = this->make_token(t);
+        } break;
+      }
+
+      tokens.push_back(token);
     }
 
     tokens.push_back(this->make_token(Token::Type::END_OF_FILE));
@@ -363,12 +387,6 @@ namespace ss
     this->start = this->current;
   }
 
-  void Scanner::advance_then_skip_whitespace() noexcept
-  {
-    this->advance();
-    this->skip_whitespace();
-  }
-
   auto Scanner::is_digit(char c) const noexcept -> bool
   {
     return !this->is_at_end() && c >= '0' && c <= '9';
@@ -421,7 +439,7 @@ namespace ss
 
   void Parser::parse_number()
   {
-    auto& lexeme = this->iter->lexeme;
+    auto lexeme = this->previous()->lexeme;
 
     const char* begin = lexeme.data();
 
@@ -429,6 +447,10 @@ namespace ss
     char* end = const_cast<char*>(lexeme.data()) + lexeme.size();
 
     Value v = std::strtod(begin, &end);
+
+    if (end == begin) {
+      this->error(this->previous(), "unparsable number");
+    }
 
     this->chunk.write_constant(v, this->iter->line);
   }
