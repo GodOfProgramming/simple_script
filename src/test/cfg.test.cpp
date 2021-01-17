@@ -49,3 +49,23 @@ TEST(VMConfig, METHOD(read_line, can_read_a_whole_line))
 
   EXPECT_EQ(line, "a multiword sentence");
 }
+
+TEST(VMConfig, METHOD(reset_ostream, can_set_ostream_back_to_inital_state))
+{
+  std::ostringstream oss;
+  VMConfig           cfg(&std::cin, &oss);
+
+  cfg.write(std::setprecision(3), 1.234567);
+
+  EXPECT_EQ(oss.str(), "1.23");
+
+  cfg.write(" ", 7.654321);
+
+  EXPECT_EQ(oss.str(), "1.23 7.65");
+
+  cfg.reset_ostream();
+
+  cfg.write(" ", 5.4321);
+
+  EXPECT_EQ(oss.str(), "1.23 7.65 5.4321");
+}
