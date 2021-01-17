@@ -70,23 +70,23 @@ namespace ss
           this->chunk->push_stack(this->chunk->constant_at(this->ip->modifying_bits));
         } break;
         case OpCode::ADD: {
-          Value a = this->chunk->pop_stack();
           Value b = this->chunk->pop_stack();
+          Value a = this->chunk->pop_stack();
           this->chunk->push_stack(a + b);
         } break;
         case OpCode::SUB: {
-          Value a = this->chunk->pop_stack();
           Value b = this->chunk->pop_stack();
+          Value a = this->chunk->pop_stack();
           this->chunk->push_stack(a - b);
         } break;
         case OpCode::MUL: {
-          Value a = this->chunk->pop_stack();
           Value b = this->chunk->pop_stack();
+          Value a = this->chunk->pop_stack();
           this->chunk->push_stack(a * b);
         } break;
         case OpCode::DIV: {
-          Value a = this->chunk->pop_stack();
           Value b = this->chunk->pop_stack();
+          Value a = this->chunk->pop_stack();
           this->chunk->push_stack(a / b);
         } break;
         case OpCode::NEGATE: {
