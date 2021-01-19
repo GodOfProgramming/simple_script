@@ -10,6 +10,17 @@
 
 namespace ss
 {
+  auto Token::operator==(const Token& other) const noexcept -> bool
+  {
+    return this->type == other.type && this->lexeme == other.lexeme && this->line == other.line && this->column == other.column;
+  }
+
+  auto operator<<(std::ostream& ostream, const Token& token) -> std::ostream&
+  {
+    return ostream << "{ type: " << static_cast<std::size_t>(token.type) << ", lexeme: \"" << token.lexeme << "\", line: " << token.line
+                   << ", column: " << token.column << " }";
+  }
+
   void Chunk::write(Instruction i, std::size_t line)
   {
     this->code.push_back(i);
@@ -206,7 +217,7 @@ namespace ss
     token.type   = t;
     token.lexeme = std::string_view(this->start.base(), this->current - this->start);
     token.line   = this->line;
-    token.column = this->column;
+    token.column = this->column - (this->current - this->start);
 
     return token;
   }
@@ -349,6 +360,7 @@ namespace ss
   {
     char c = *this->current;
     this->current++;
+    this->column++;
     return c;
   }
 
@@ -478,7 +490,7 @@ namespace ss
   auto Parser::rule_for(Token::Type t) const noexcept -> const ParseRule&
   {
     static const std::array<ParseRule, static_cast<std::size_t>(Token::Type::LAST)> rules = [this] {
-      std::array<ParseRule, static_cast<std::size_t>(Token::Type::LAST)> rules;
+      std::array<ParseRule, static_cast<std::size_t>(Token::Type::LAST)> rules{};
       rules[static_cast<std::size_t>(Token::Type::LEFT_PAREN)]    = {&Parser::grouping, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::RIGHT_PAREN)]   = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::LEFT_BRACE)]    = {nullptr, nullptr, Precedence::NONE};
@@ -532,8 +544,11 @@ namespace ss
 
   void Parser::grouping()
   {
+    std::cout << "in grouping\n";
     this->expression();
+    std::cout << "parsed expression\n";
     this->consume(Token::Type::RIGHT_PAREN, "expect ')' after expression");
+    std::cout << "consumed right paren\n";
   }
 
   void Parser::unary()

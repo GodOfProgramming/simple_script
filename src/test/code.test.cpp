@@ -37,7 +37,8 @@ TEST(Chunk, METHOD(write_constant, can_write_constant))
   EXPECT_EQ(chunk.constant_at(2), Value("str"));
 }
 
-TEST(Chunk, METHOD(push_stack__pop_stack, can_push_onto_stack_and_pop)) {
+TEST(Chunk, METHOD(push_stack__pop_stack, can_push_onto_stack_and_pop))
+{
   Chunk chunk;
 
   EXPECT_TRUE(chunk.stack_empty());
@@ -72,4 +73,92 @@ TEST(OpCode, METHOD(to_string, returns_the_right_string))
   EXPECT_STREQ(ss::to_string(OpCode::NEGATE), "NEGATE");
   EXPECT_STREQ(ss::to_string(OpCode::RETURN), "RETURN");
   EXPECT_STREQ(ss::to_string(static_cast<OpCode>(-1)), "UNKNOWN");
+}
+
+using ss::Scanner;
+using ss::Token;
+
+TEST(Scanner, METHOD(scan, some_code))
+{
+  std::string text = "1 * 2 + 4 - 8 / 16";
+
+  Scanner scanner(text);
+
+  std::vector<Token> expected = {
+   Token{
+    Token::Type::NUMBER,
+    std::string_view("1"),
+    1,
+    1,
+   },
+   Token{
+    Token::Type::STAR,
+    std::string_view("*"),
+    1,
+    3,
+   },
+   Token{
+    Token::Type::NUMBER,
+    std::string_view("2"),
+    1,
+    5,
+   },
+   Token{
+    Token::Type::PLUS,
+    std::string_view("+"),
+    1,
+    7,
+   },
+   Token{
+    Token::Type::NUMBER,
+    std::string_view("4"),
+    1,
+    9,
+   },
+   Token{
+    Token::Type::MINUS,
+    std::string_view("-"),
+    1,
+    11,
+   },
+   Token{
+    Token::Type::NUMBER,
+    std::string_view("8"),
+    1,
+    13,
+   },
+   Token{
+    Token::Type::SLASH,
+    std::string_view("/"),
+    1,
+    15,
+   },
+   Token{
+    Token::Type::NUMBER,
+    std::string_view("16"),
+    1,
+    17,
+   },
+   Token{
+    Token::Type::END_OF_FILE,
+    std::string_view(""),
+    1,
+    19,
+   },
+  };
+
+  auto tokens = scanner.scan();
+
+  ASSERT_EQ(expected.size(), tokens.size());
+
+  for (std::size_t i = 0; i < expected.size(); i++) {
+    EXPECT_EQ(expected[i], tokens[i]) << "i: " << i;
+  }
+}
+
+using ss::Parser;
+
+TEST(Parser, METHOD(parse, some_math))
+{
+  GTEST_SKIP();
 }

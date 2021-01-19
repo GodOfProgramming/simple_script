@@ -161,7 +161,11 @@ namespace ss
     std::string_view lexeme;
     std::size_t      line;
     std::size_t      column;
+
+    auto operator==(const Token& other) const noexcept -> bool;
   };
+
+  auto operator<<(std::ostream& ostream, const Token& token) -> std::ostream&;
 
   class Chunk
   {
