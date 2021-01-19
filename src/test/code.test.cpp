@@ -157,8 +157,34 @@ TEST(Scanner, METHOD(scan, some_code))
 }
 
 using ss::Parser;
+using ss::Instruction;
+using ss::OpCode;
 
 TEST(Parser, METHOD(parse, some_math))
 {
-  GTEST_SKIP();
+  std::string src = "!(5 - 4 > 3 * 2 == !nil)";
+  Scanner scanner(src);
+
+  auto tokens = scanner.scan();
+
+  Chunk chunk;
+
+  Parser parser(std::move(tokens), chunk);
+
+  EXPECT_NO_THROW(parser.parse());
+
+  std::vector<Instruction> expected = {
+    Instruction{OpCode::CONSTANT, 0},
+    Instruction{OpCode::CONSTANT, 1},
+    Instruction{OpCode::SUB},
+    Instruction{OpCode::CONSTANT, 2},
+    Instruction{OpCode::CONSTANT, 3},
+    Instruction{OpCode::GREATER},
+    Instruction{OpCode::NIL},
+    Instruction{OpCode::NEGATE},
+    Instruction{OpCode::EQUAL},
+    Instruction{OpCode::NEGATE},
+  };
+
+  ASSERT_EQ(expected.size(), chunk.code.size());
 }

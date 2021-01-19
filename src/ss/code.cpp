@@ -17,8 +17,8 @@ namespace ss
 
   auto operator<<(std::ostream& ostream, const Token& token) -> std::ostream&
   {
-    return ostream << "{ type: " << static_cast<std::size_t>(token.type) << ", lexeme: \"" << token.lexeme << "\", line: " << token.line
-                   << ", column: " << token.column << " }";
+    return ostream << "{ type: " << static_cast<std::size_t>(token.type) << ", lexeme: \"" << token.lexeme
+                   << "\", line: " << token.line << ", column: " << token.column << " }";
   }
 
   void Chunk::write(Instruction i, std::size_t line)
@@ -409,7 +409,7 @@ namespace ss
 
   auto Scanner::is_alpha(char c) const noexcept -> bool
   {
-    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || c == '@';
   }
 
   Parser::Parser(TokenList&& t, Chunk& c) noexcept: tokens(std::move(t)), chunk(c) {}
@@ -559,6 +559,7 @@ namespace ss
 
     switch (operator_type) {
       case Token::Type::BANG: {
+        std::cout << "bang\n";
         this->emit_instruction(Instruction{OpCode::NOT});
       } break;
       case Token::Type::MINUS: {
