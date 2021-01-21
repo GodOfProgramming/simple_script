@@ -124,11 +124,11 @@ TEST(Value, METHOD(operator_not, can_inverse_truth))
   Value v4(1.0);
   Value v5("some string");
 
-  EXPECT_THROW(!v1, RuntimeError);
+  EXPECT_TRUE((!v1).boolean());
   EXPECT_FALSE((!v2).boolean());
   EXPECT_TRUE((!v3).boolean());
-  EXPECT_THROW(!v4, RuntimeError);
-  EXPECT_THROW(!v5, RuntimeError);
+  EXPECT_FALSE((!v4).boolean());
+  EXPECT_FALSE((!v5).boolean());
 }
 
 TEST(Value, METHOD(operator_add, can_add_two_numbers))

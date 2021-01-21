@@ -179,11 +179,12 @@ TEST(Parser, METHOD(parse, some_math))
     Instruction{OpCode::SUB},
     Instruction{OpCode::CONSTANT, 2},
     Instruction{OpCode::CONSTANT, 3},
+    Instruction{OpCode::MUL},
     Instruction{OpCode::GREATER},
     Instruction{OpCode::NIL},
-    Instruction{OpCode::NEGATE},
+    Instruction{OpCode::NOT},
     Instruction{OpCode::EQUAL},
-    Instruction{OpCode::NEGATE},
+    Instruction{OpCode::NOT},
   };
 
   ASSERT_EQ(expected.size(), chunk.code.size());

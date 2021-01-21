@@ -521,7 +521,7 @@ namespace ss
       rules[static_cast<std::size_t>(Token::Type::FOR)]           = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::FN)]            = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::IF)]            = {nullptr, nullptr, Precedence::NONE};
-      rules[static_cast<std::size_t>(Token::Type::NIL)]           = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::NIL)]           = {&Parser::literal, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::OR)]            = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::PRINT)]         = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::RETURN)]        = {nullptr, nullptr, Precedence::NONE};
@@ -544,11 +544,8 @@ namespace ss
 
   void Parser::grouping()
   {
-    std::cout << "in grouping\n";
     this->expression();
-    std::cout << "parsed expression\n";
     this->consume(Token::Type::RIGHT_PAREN, "expect ')' after expression");
-    std::cout << "consumed right paren\n";
   }
 
   void Parser::unary()
@@ -559,7 +556,6 @@ namespace ss
 
     switch (operator_type) {
       case Token::Type::BANG: {
-        std::cout << "bang\n";
         this->emit_instruction(Instruction{OpCode::NOT});
       } break;
       case Token::Type::MINUS: {

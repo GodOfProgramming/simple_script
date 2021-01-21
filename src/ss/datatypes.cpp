@@ -101,14 +101,7 @@ namespace ss
 
   auto Value::operator!() const -> Value
   {
-    switch (this->type()) {
-      case Type::Bool: {
-        return Value(!std::get<BoolType>(this->value));
-      }
-      default: {
-        THROW_RUNTIME_ERROR("negation on invalid type");
-      }
-    }
+    return Value(!this->truthy());
   }
 
   auto Value::operator+(const Value& other) const -> Value
