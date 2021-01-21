@@ -264,12 +264,4 @@ namespace ss
 #undef SS_SIMPLE_PRINT_CASE
   }
 
-  void VM::print_stack() noexcept
-  {
-    this->config.write("        | ");
-    for (const auto& value : chunk->stack) {
-      this->config.write("[ ", value.to_string(), " ]");
-    }
-    this->config.write_line();
-  }
 }  // namespace ss

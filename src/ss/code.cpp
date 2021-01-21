@@ -1,3 +1,4 @@
+#include "cfg.hpp"
 #include "code.hpp"
 #include "datatypes.hpp"
 #include "exceptions.hpp"
@@ -31,13 +32,13 @@ namespace ss
                    << ", column: " << token.column << " }";
   }
 
-  void Chunk::write(Instruction i, std::size_t line)
+  void Chunk::write(Instruction i, std::size_t line) noexcept
   {
     this->code.push_back(i);
     this->add_line(line);
   }
 
-  void Chunk::write_constant(Value v, std::size_t line)
+  void Chunk::write_constant(Value v, std::size_t line) noexcept
   {
     this->constants.push_back(v);
     Instruction i{
@@ -47,36 +48,34 @@ namespace ss
     this->write(i, line);
   }
 
-  auto Chunk::insert_constant(Value v) -> std::size_t
+  auto Chunk::insert_constant(Value v) noexcept -> std::size_t
   {
     this->constants.push_back(v);
     return this->constants.size() - 1;
   }
 
-  auto Chunk::constant_at(std::size_t offset) -> Value
+  auto Chunk::constant_at(std::size_t offset) const noexcept -> Value
   {
     return this->constants[offset];
   }
 
-  void Chunk::push_stack(Value v)
+  void Chunk::push_stack(Value v) noexcept
   {
     this->stack.push_back(v);
   }
 
-  auto Chunk::pop_stack() -> Value
+  auto Chunk::pop_stack() noexcept -> Value
   {
     Value v = this->stack.back();
     this->stack.pop_back();
     return v;
   }
 
-  auto Chunk::stack_empty() -> bool
+  auto Chunk::stack_empty() const noexcept -> bool
   {
     return this->stack.empty();
   }
 
-  // increments the current number of instructions on a line
-  // or publishes the number and resets the count
   void Chunk::add_line(std::size_t line) noexcept
   {
     if (this->last_line == line) {
@@ -89,7 +88,15 @@ namespace ss
     }
   }
 
-  // extracts the line at the given instruction offset
+  void Chunk::print_stack(VMConfig& cfg) const noexcept
+  {
+    cfg.write("        | ");
+    for (const auto& value : this->stack) {
+      cfg.write("[ ", value.to_string(), " ]");
+    }
+    cfg.write_line();
+  }
+
   auto Chunk::line_at(std::size_t offset) const noexcept -> std::size_t
   {
     std::size_t accum = 0;

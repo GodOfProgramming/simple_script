@@ -7,8 +7,8 @@
 #include <functional>
 
 #define SS_ENUM_TO_STR_CASE(enum, name) \
-  case enum::name: {            \
-    return #name;                 \
+  case enum ::name: {                   \
+    return #name;                       \
   }
 
 namespace ss
@@ -80,8 +80,14 @@ namespace ss
 
   auto operator<<(std::ostream& ostream, const OpCode& code) -> std::ostream&;
 
+  /**
+   * @brief Structure representing scanned tokens
+   */
   struct Token
   {
+    /**
+     * @brief Enumeration representing types of tokens
+     */
     enum class Type
     {
       // Single-character tokens.
@@ -142,7 +148,8 @@ namespace ss
     auto operator==(const Token& other) const noexcept -> bool;
   };
 
-  constexpr auto to_string(Token::Type type) noexcept -> const char* {
+  constexpr auto to_string(Token::Type type) noexcept -> const char*
+  {
     switch (type) {
       SS_ENUM_TO_STR_CASE(Token::Type, LEFT_PAREN)
       SS_ENUM_TO_STR_CASE(Token::Type, RIGHT_PAREN)
@@ -196,23 +203,66 @@ namespace ss
   class Chunk
   {
    public:
-    void write(Instruction, std::size_t line);
-    void write_constant(Value v, std::size_t line);
-    auto insert_constant(Value v) -> std::size_t;
+    /**
+     * @brief Writes the instruction and tags it with the line
+     */
+    void write(Instruction, std::size_t line) noexcept;
 
-    auto constant_at(std::size_t offset) -> Value;
+    /**
+     * @brief Writes a constant instruction and tags the instruction with the line
+     */
+    void write_constant(Value v, std::size_t line) noexcept;
 
-    void push_stack(Value v);
-    auto pop_stack() -> Value;
-    auto stack_empty() -> bool;
+    /**
+     * @brief Writes a constant to the constant buffer
+     *
+     * @return The offset of the newly inserted constant
+     */
+    auto insert_constant(Value v) noexcept -> std::size_t;
 
+    /**
+     * @brief Acquires the constant at the given index
+     *
+     * @return The value at the offset
+     */
+    auto constant_at(std::size_t offset) const noexcept -> Value;
+
+    /**
+     * @brief Pushes a new value onto the stack
+     */
+    void push_stack(Value v) noexcept;
+
+    /**
+     * @brief Pops a value off the stack
+     *
+     * @return The value popped off the stack
+     */
+    auto pop_stack() noexcept -> Value;
+
+    /**
+     * @brief Check if the stack is empty
+     *
+     * @return True if the stack is empty, false otherwise
+     */
+    auto stack_empty() const noexcept -> bool;
+
+    /**
+     * @brief Prints the stack to the given output stream
+     */
+    void print_stack(VMConfig& cfg) const noexcept;
+
+    /**
+     * @brief Grabs the line at the given offset
+     *
+     * @return The line number
+     */
     auto line_at(std::size_t offset) const noexcept -> std::size_t;
 
     std::vector<Instruction> code;
-    std::vector<Value>       constants;
-    std::vector<Value>       stack;
 
    private:
+    std::vector<Value>       constants;
+    std::vector<Value>       stack;
     std::vector<std::size_t> lines;
     std::size_t              last_line            = 0;
     std::size_t              instructions_on_line = 0;
