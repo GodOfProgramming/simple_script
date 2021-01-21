@@ -140,11 +140,31 @@ namespace ss
             ss << a << b;
             return Value(ss.str());
           }
+          case Type::Bool: {
+            auto              b = std::get<BoolType>(other.value);
+            std::stringstream ss;
+            ss << a << (b ? "true" : "false");
+            return Value(ss.str());
+          }
           default: {
             THROW_RUNTIME_ERROR("unable to add invalid types");
           }
         }
       }
+      case Type::Bool: {
+        auto a = std::get<BoolType>(this->value);
+        switch (other.type()) {
+          case Type::String: {
+            auto              b = std::get<StringType>(other.value);
+            std::stringstream ss;
+            ss << (a ? "true" : "false") << b;
+            return Value(ss.str());
+          }
+          default: {
+            THROW_RUNTIME_ERROR("unable to add invalid types");
+          }
+        }
+      } break;
       default: {
         THROW_RUNTIME_ERROR("unable to add invalid types");
       }

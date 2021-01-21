@@ -275,9 +275,10 @@ namespace ss
     void error(TokenIterator tok, std::string msg) const;
     void emit_instruction(Instruction i);
 
-    void parse_number();
     void parse_precedence(Precedence p);
     auto rule_for(Token::Type t) const noexcept -> const ParseRule&;
+    void parse_number();
+    void parse_string();
 
     void expression();
     void grouping();

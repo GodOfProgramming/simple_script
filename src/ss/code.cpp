@@ -162,7 +162,6 @@ namespace ss
         } break;
         case '"': {
           t = Token::Type::STRING;
-          tokens.push_back(this->make_string());
         } break;
         default: {
           if (this->is_digit(c)) {
@@ -452,27 +451,10 @@ namespace ss
     this->chunk.write(i, this->previous()->line);
   }
 
-  void Parser::parse_number()
-  {
-    auto lexeme = this->previous()->lexeme;
-
-    const char* begin = lexeme.data();
-
-    // TODO when gcc finally has from_chars support for non-integrals
-    char* end = const_cast<char*>(lexeme.data()) + lexeme.size();
-
-    Value v = std::strtod(begin, &end);
-
-    if (end == begin) {
-      this->error(this->previous(), "unparsable number");
-    }
-
-    this->chunk.write_constant(v, this->iter->line);
-  }
-
   void Parser::parse_precedence(Precedence precedence)
   {
     this->advance();
+    std::cout << "getting rule for " << static_cast<int>(this->previous()->type) << '\n';
     ParseFn prefix_rule = this->rule_for(this->previous()->type).prefix;
     if (prefix_rule == nullptr) {
       this->error(this->previous(), "expected an expression");
@@ -512,7 +494,7 @@ namespace ss
       rules[static_cast<std::size_t>(Token::Type::LESS)]          = {nullptr, &Parser::binary, Precedence::COMPARISON};
       rules[static_cast<std::size_t>(Token::Type::LESS_EQUAL)]    = {nullptr, &Parser::binary, Precedence::COMPARISON};
       rules[static_cast<std::size_t>(Token::Type::IDENTIFIER)]    = {nullptr, nullptr, Precedence::NONE};
-      rules[static_cast<std::size_t>(Token::Type::STRING)]        = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::STRING)]        = {&Parser::parse_string, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::NUMBER)]        = {&Parser::parse_number, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::AND)]           = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::CLASS)]         = {nullptr, nullptr, Precedence::NONE};
@@ -535,6 +517,30 @@ namespace ss
     }();
 
     return rules[static_cast<std::size_t>(t)];
+  }
+
+  void Parser::parse_number()
+  {
+    auto lexeme = this->previous()->lexeme;
+
+    const char* begin = lexeme.data();
+
+    // TODO when gcc finally has from_chars support for non-integrals
+    char* end = const_cast<char*>(lexeme.data()) + lexeme.size();
+
+    Value v = std::strtod(begin, &end);
+
+    if (end == begin) {
+      this->error(this->previous(), "unparsable number");
+    }
+
+    this->chunk.write_constant(v, this->previous()->line);
+  }
+
+  void Parser::parse_string()
+  {
+    Value v(std::string(this->previous()->lexeme));
+    this->chunk.write_constant(v, this->previous()->line);
   }
 
   void Parser::expression()
