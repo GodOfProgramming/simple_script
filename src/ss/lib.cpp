@@ -7,7 +7,7 @@
 
 namespace
 {
-  constexpr bool DISASSEMBLE_CHUNK = false;
+  constexpr bool DISASSEMBLE_CHUNK = true;
   constexpr bool SHOW_DISASSEMBLY  = false;
   constexpr bool PRINT_STACK       = false;
   constexpr bool ECHO_INPUT        = false;
@@ -84,6 +84,33 @@ namespace ss
         } break;
         case OpCode::POP: {
           this->chunk->pop_stack();
+        } break;
+        case OpCode::LOOKUP_GLOBAL: {
+          Value name_value = this->chunk->constant_at(this->ip->modifying_bits);
+          if (!name_value.is_type(Value::Type::String)) {
+            THROW_RUNTIME_ERROR("invalid type for variable name");
+          }
+          Value::StringType name = name_value.string();
+          auto              var  = this->globals.find(name);
+          if (var == this->globals.end()) {
+            std::stringstream ss;
+            ss << "tried using undefined variable '" << name << '\'';
+            THROW_RUNTIME_ERROR(ss.str());
+          }
+          this->chunk->push_stack(var->second);
+        } break;
+        case OpCode::DEFINE_GLOBAL: {
+          Value name_value = this->chunk->constant_at(this->ip->modifying_bits);
+          if (!name_value.is_type(Value::Type::String)) {
+            THROW_RUNTIME_ERROR("invalid type for variable name");
+          }
+          Value::StringType name = name_value.string();
+          if (this->globals.find(name) != this->globals.end()) {
+            std::stringstream ss;
+            ss << "variable '" << name << "' already defined";
+            THROW_RUNTIME_ERROR(ss.str());
+          }
+          this->globals.emplace(name, this->chunk->pop_stack());
         } break;
         case OpCode::EQUAL: {
           Value b = this->chunk->pop_stack();
@@ -182,9 +209,9 @@ namespace ss
 
   void VM::disassemble_instruction(Chunk& chunk, Instruction i, std::size_t offset) noexcept
   {
-#define SS_SIMPLE_PRINT_CASE(name)                    \
-  case OpCode::name: {                                \
-    this->config.write_line(to_string(OpCode::name)); \
+#define SS_SIMPLE_PRINT_CASE(name)         \
+  case OpCode::name: {                     \
+    this->config.write_line(OpCode::name); \
   } break;
 
     this->config.write(std::setw(4), std::setfill('0'), offset, ' ');
@@ -201,7 +228,7 @@ namespace ss
       SS_SIMPLE_PRINT_CASE(NO_OP)
       case OpCode::CONSTANT: {
         Value constant = chunk.constant_at(i.modifying_bits);
-        this->config.write(std::setw(16), std::left, to_string(OpCode::CONSTANT));
+        this->config.write(std::setw(16), std::left, OpCode::CONSTANT);
         this->config.reset_ostream();
         this->config.write(' ', std::setw(4), i.modifying_bits);
         this->config.reset_ostream();
@@ -212,6 +239,8 @@ namespace ss
         SS_SIMPLE_PRINT_CASE(TRUE)
         SS_SIMPLE_PRINT_CASE(FALSE)
         SS_SIMPLE_PRINT_CASE(POP)
+        SS_SIMPLE_PRINT_CASE(LOOKUP_GLOBAL)
+        SS_SIMPLE_PRINT_CASE(DEFINE_GLOBAL)
         SS_SIMPLE_PRINT_CASE(EQUAL)
         SS_SIMPLE_PRINT_CASE(NOT_EQUAL)
         SS_SIMPLE_PRINT_CASE(GREATER)
@@ -228,7 +257,7 @@ namespace ss
         SS_SIMPLE_PRINT_CASE(PRINT)
         SS_SIMPLE_PRINT_CASE(RETURN)
       default: {
-        this->config.write_line(to_string(i.major_opcode), ": ", static_cast<std::uint8_t>(i.major_opcode));
+        this->config.write_line(i.major_opcode, ": ", i.modifying_bits);
       } break;
     }
 

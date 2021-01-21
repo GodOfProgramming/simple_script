@@ -6,6 +6,11 @@
 #include <vector>
 #include <functional>
 
+#define SS_ENUM_TO_STR_CASE(enum, name) \
+  case enum::name: {            \
+    return #name;                 \
+  }
+
 namespace ss
 {
   enum class OpCode : std::uint8_t
@@ -16,6 +21,8 @@ namespace ss
     TRUE,
     FALSE,
     POP,
+    LOOKUP_GLOBAL,
+    DEFINE_GLOBAL,
     EQUAL,
     NOT_EQUAL,
     GREATER,
@@ -41,39 +48,37 @@ namespace ss
 
   constexpr auto to_string(OpCode op) noexcept -> const char*
   {
-#define SS_TO_STR(name) \
-  case OpCode::name: {  \
-    return #name;       \
-  }
     switch (op) {
-      SS_TO_STR(NO_OP)
-      SS_TO_STR(CONSTANT)
-      SS_TO_STR(NIL)
-      SS_TO_STR(TRUE)
-      SS_TO_STR(FALSE)
-      SS_TO_STR(POP)
-      SS_TO_STR(EQUAL)
-      SS_TO_STR(NOT_EQUAL)
-      SS_TO_STR(GREATER)
-      SS_TO_STR(GREATER_EQUAL)
-      SS_TO_STR(LESS)
-      SS_TO_STR(LESS_EQUAL)
-      SS_TO_STR(ADD)
-      SS_TO_STR(SUB)
-      SS_TO_STR(MUL)
-      SS_TO_STR(DIV)
-      SS_TO_STR(MOD)
-      SS_TO_STR(NOT)
-      SS_TO_STR(NEGATE)
-      SS_TO_STR(PRINT)
-      SS_TO_STR(RETURN)
+      SS_ENUM_TO_STR_CASE(OpCode, NO_OP)
+      SS_ENUM_TO_STR_CASE(OpCode, CONSTANT)
+      SS_ENUM_TO_STR_CASE(OpCode, NIL)
+      SS_ENUM_TO_STR_CASE(OpCode, TRUE)
+      SS_ENUM_TO_STR_CASE(OpCode, FALSE)
+      SS_ENUM_TO_STR_CASE(OpCode, POP)
+      SS_ENUM_TO_STR_CASE(OpCode, LOOKUP_GLOBAL)
+      SS_ENUM_TO_STR_CASE(OpCode, DEFINE_GLOBAL)
+      SS_ENUM_TO_STR_CASE(OpCode, EQUAL)
+      SS_ENUM_TO_STR_CASE(OpCode, NOT_EQUAL)
+      SS_ENUM_TO_STR_CASE(OpCode, GREATER)
+      SS_ENUM_TO_STR_CASE(OpCode, GREATER_EQUAL)
+      SS_ENUM_TO_STR_CASE(OpCode, LESS)
+      SS_ENUM_TO_STR_CASE(OpCode, LESS_EQUAL)
+      SS_ENUM_TO_STR_CASE(OpCode, ADD)
+      SS_ENUM_TO_STR_CASE(OpCode, SUB)
+      SS_ENUM_TO_STR_CASE(OpCode, MUL)
+      SS_ENUM_TO_STR_CASE(OpCode, DIV)
+      SS_ENUM_TO_STR_CASE(OpCode, MOD)
+      SS_ENUM_TO_STR_CASE(OpCode, NOT)
+      SS_ENUM_TO_STR_CASE(OpCode, NEGATE)
+      SS_ENUM_TO_STR_CASE(OpCode, PRINT)
+      SS_ENUM_TO_STR_CASE(OpCode, RETURN)
       default: {
         return "UNKNOWN";
       }
     }
-
-#undef SS_TO_STR
   }
+
+  auto operator<<(std::ostream& ostream, const OpCode& code) -> std::ostream&;
 
   struct Token
   {
@@ -137,6 +142,55 @@ namespace ss
     auto operator==(const Token& other) const noexcept -> bool;
   };
 
+  constexpr auto to_string(Token::Type type) noexcept -> const char* {
+    switch (type) {
+      SS_ENUM_TO_STR_CASE(Token::Type, LEFT_PAREN)
+      SS_ENUM_TO_STR_CASE(Token::Type, RIGHT_PAREN)
+      SS_ENUM_TO_STR_CASE(Token::Type, LEFT_BRACE)
+      SS_ENUM_TO_STR_CASE(Token::Type, RIGHT_BRACE)
+      SS_ENUM_TO_STR_CASE(Token::Type, COMMA)
+      SS_ENUM_TO_STR_CASE(Token::Type, DOT)
+      SS_ENUM_TO_STR_CASE(Token::Type, SEMICOLON)
+      SS_ENUM_TO_STR_CASE(Token::Type, PLUS)
+      SS_ENUM_TO_STR_CASE(Token::Type, MINUS)
+      SS_ENUM_TO_STR_CASE(Token::Type, STAR)
+      SS_ENUM_TO_STR_CASE(Token::Type, SLASH)
+      SS_ENUM_TO_STR_CASE(Token::Type, MODULUS)
+      SS_ENUM_TO_STR_CASE(Token::Type, BANG)
+      SS_ENUM_TO_STR_CASE(Token::Type, BANG_EQUAL)
+      SS_ENUM_TO_STR_CASE(Token::Type, EQUAL)
+      SS_ENUM_TO_STR_CASE(Token::Type, EQUAL_EQUAL)
+      SS_ENUM_TO_STR_CASE(Token::Type, GREATER)
+      SS_ENUM_TO_STR_CASE(Token::Type, GREATER_EQUAL)
+      SS_ENUM_TO_STR_CASE(Token::Type, LESS)
+      SS_ENUM_TO_STR_CASE(Token::Type, LESS_EQUAL)
+      SS_ENUM_TO_STR_CASE(Token::Type, IDENTIFIER)
+      SS_ENUM_TO_STR_CASE(Token::Type, STRING)
+      SS_ENUM_TO_STR_CASE(Token::Type, NUMBER)
+      SS_ENUM_TO_STR_CASE(Token::Type, AND)
+      SS_ENUM_TO_STR_CASE(Token::Type, CLASS)
+      SS_ENUM_TO_STR_CASE(Token::Type, ELSE)
+      SS_ENUM_TO_STR_CASE(Token::Type, FALSE)
+      SS_ENUM_TO_STR_CASE(Token::Type, FOR)
+      SS_ENUM_TO_STR_CASE(Token::Type, FN)
+      SS_ENUM_TO_STR_CASE(Token::Type, IF)
+      SS_ENUM_TO_STR_CASE(Token::Type, LET)
+      SS_ENUM_TO_STR_CASE(Token::Type, NIL)
+      SS_ENUM_TO_STR_CASE(Token::Type, OR)
+      SS_ENUM_TO_STR_CASE(Token::Type, PRINT)
+      SS_ENUM_TO_STR_CASE(Token::Type, RETURN)
+      SS_ENUM_TO_STR_CASE(Token::Type, TRUE)
+      SS_ENUM_TO_STR_CASE(Token::Type, WHILE)
+      SS_ENUM_TO_STR_CASE(Token::Type, ERROR)
+      SS_ENUM_TO_STR_CASE(Token::Type, END_OF_FILE)
+      SS_ENUM_TO_STR_CASE(Token::Type, LAST)
+      default: {
+        return "UNKNOWN";
+      }
+    }
+  }
+
+  auto operator<<(std::ostream& ostream, const Token::Type& type) -> std::ostream&;
   auto operator<<(std::ostream& ostream, const Token& token) -> std::ostream&;
 
   class Chunk
@@ -144,6 +198,7 @@ namespace ss
    public:
     void write(Instruction, std::size_t line);
     void write_constant(Value v, std::size_t line);
+    auto insert_constant(Value v) -> std::size_t;
 
     auto constant_at(std::size_t offset) -> Value;
 
@@ -247,10 +302,15 @@ namespace ss
     void error(TokenIterator tok, std::string msg) const;
     void emit_instruction(Instruction i);
 
-    void parse_precedence(Precedence p);
     auto rule_for(Token::Type t) const noexcept -> const ParseRule&;
-    void parse_number();
-    void parse_string();
+    void parse_precedence(Precedence p);
+    void make_number();
+    void make_string();
+    void make_variable();
+    void named_variable(TokenIterator name);
+    auto parse_variable(std::string err_msg) -> std::size_t;
+    void define_variable(std::size_t global);
+    auto identifier_constant(TokenIterator name) -> std::size_t;
     auto check(Token::Type type) -> bool;
     auto advance_if_matches(Token::Type type) -> bool;
 
@@ -265,5 +325,6 @@ namespace ss
     void statement();
     void print_statement();
     void expression_statement();
+    void let_statement();
   };
 }  // namespace ss

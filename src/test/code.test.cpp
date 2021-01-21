@@ -60,7 +60,7 @@ using ss::OpCode;
 
 TEST(OpCode, METHOD(to_string, returns_the_right_string))
 {
-  EXPECT_STREQ(ss::to_string(OpCode::NO_OP), "NOOP");
+  EXPECT_STREQ(ss::to_string(OpCode::NO_OP), "NO_OP");
   EXPECT_STREQ(ss::to_string(OpCode::CONSTANT), "CONSTANT");
   EXPECT_STREQ(ss::to_string(OpCode::NIL), "NIL");
   EXPECT_STREQ(ss::to_string(OpCode::TRUE), "TRUE");
@@ -162,7 +162,7 @@ using ss::OpCode;
 
 TEST(Parser, METHOD(parse, some_math))
 {
-  std::string src = "!(5 - 4 > 3 * 2 == !nil)";
+  std::string src = "!(5 - 4 > 3 * 2 == !nil);";
   Scanner scanner(src);
 
   auto tokens = scanner.scan();
@@ -185,6 +185,7 @@ TEST(Parser, METHOD(parse, some_math))
     Instruction{OpCode::NOT},
     Instruction{OpCode::EQUAL},
     Instruction{OpCode::NOT},
+    Instruction{OpCode::POP},
   };
 
   ASSERT_EQ(expected.size(), chunk.code.size());

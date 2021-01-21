@@ -10,15 +10,25 @@
 
 namespace ss
 {
+  auto operator<<(std::ostream& ostream, const OpCode& code) -> std::ostream&
+  {
+    return ostream << to_string(code);
+  }
+
   auto Token::operator==(const Token& other) const noexcept -> bool
   {
     return this->type == other.type && this->lexeme == other.lexeme && this->line == other.line && this->column == other.column;
   }
 
+  auto operator<<(std::ostream& ostream, const Token::Type& type) -> std::ostream&
+  {
+    return ostream << to_string(type);
+  }
+
   auto operator<<(std::ostream& ostream, const Token& token) -> std::ostream&
   {
-    return ostream << "{ type: " << static_cast<std::size_t>(token.type) << ", lexeme: \"" << token.lexeme
-                   << "\", line: " << token.line << ", column: " << token.column << " }";
+    return ostream << "{ type: " << token.type << ", lexeme: \"" << token.lexeme << "\", line: " << token.line
+                   << ", column: " << token.column << " }";
   }
 
   void Chunk::write(Instruction i, std::size_t line)
@@ -35,6 +45,12 @@ namespace ss
      this->constants.size() - 1,
     };
     this->write(i, line);
+  }
+
+  auto Chunk::insert_constant(Value v) -> std::size_t
+  {
+    this->constants.push_back(v);
+    return this->constants.size() - 1;
   }
 
   auto Chunk::constant_at(std::size_t offset) -> Value
@@ -365,7 +381,7 @@ namespace ss
 
   auto Scanner::advance_if_match(char expected) noexcept -> bool
   {
-    if (*this->current != expected || this->is_at_end()) {
+    if (this->is_at_end() || this->peek_next() != expected) {
       return false;
     }
 
@@ -415,7 +431,8 @@ namespace ss
 
   void Parser::parse()
   {
-    for (this->iter = tokens.begin(); this->iter < tokens.end(); this->advance()) {
+    this->iter = this->tokens.begin();
+    while (this->iter < tokens.end() && this->iter->type != Token::Type::END_OF_FILE) {
       this->declaration();
     }
   }
@@ -451,23 +468,6 @@ namespace ss
     this->chunk.write(i, this->previous()->line);
   }
 
-  void Parser::parse_precedence(Precedence precedence)
-  {
-    this->advance();
-    ParseFn prefix_rule = this->rule_for(this->previous()->type).prefix;
-    if (prefix_rule == nullptr) {
-      this->error(this->previous(), "expected an expression");
-    }
-
-    prefix_rule(this);
-
-    while (static_cast<size_t>(precedence) <= static_cast<std::size_t>(this->rule_for(this->iter->type).precedence)) {
-      this->advance();
-      ParseFn infix_rule = this->rule_for(this->previous()->type).infix;
-      infix_rule(this);
-    }
-  }
-
   auto Parser::rule_for(Token::Type t) const noexcept -> const ParseRule&
   {
     static const std::array<ParseRule, static_cast<std::size_t>(Token::Type::LAST)> rules = [this] {
@@ -492,9 +492,9 @@ namespace ss
       rules[static_cast<std::size_t>(Token::Type::GREATER_EQUAL)] = {nullptr, &Parser::binary, Precedence::COMPARISON};
       rules[static_cast<std::size_t>(Token::Type::LESS)]          = {nullptr, &Parser::binary, Precedence::COMPARISON};
       rules[static_cast<std::size_t>(Token::Type::LESS_EQUAL)]    = {nullptr, &Parser::binary, Precedence::COMPARISON};
-      rules[static_cast<std::size_t>(Token::Type::IDENTIFIER)]    = {nullptr, nullptr, Precedence::NONE};
-      rules[static_cast<std::size_t>(Token::Type::STRING)]        = {&Parser::parse_string, nullptr, Precedence::NONE};
-      rules[static_cast<std::size_t>(Token::Type::NUMBER)]        = {&Parser::parse_number, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::IDENTIFIER)]    = {&Parser::make_variable, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::STRING)]        = {&Parser::make_string, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::NUMBER)]        = {&Parser::make_number, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::AND)]           = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::CLASS)]         = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::ELSE)]          = {nullptr, nullptr, Precedence::NONE};
@@ -518,7 +518,24 @@ namespace ss
     return rules[static_cast<std::size_t>(t)];
   }
 
-  void Parser::parse_number()
+  void Parser::parse_precedence(Precedence precedence)
+  {
+    this->advance();
+    ParseFn prefix_rule = this->rule_for(this->previous()->type).prefix;
+    if (prefix_rule == nullptr) {
+      this->error(this->previous(), "expected an expression");
+    }
+
+    prefix_rule(this);
+
+    while (static_cast<size_t>(precedence) <= static_cast<std::size_t>(this->rule_for(this->iter->type).precedence)) {
+      this->advance();
+      ParseFn infix_rule = this->rule_for(this->previous()->type).infix;
+      infix_rule(this);
+    }
+  }
+
+  void Parser::make_number()
   {
     auto lexeme = this->previous()->lexeme;
 
@@ -536,10 +553,37 @@ namespace ss
     this->chunk.write_constant(v, this->previous()->line);
   }
 
-  void Parser::parse_string()
+  void Parser::make_string()
   {
     Value v(std::string(this->previous()->lexeme));
     this->chunk.write_constant(v, this->previous()->line);
+  }
+
+  void Parser::make_variable()
+  {
+    this->named_variable(this->previous());
+  }
+
+  void Parser::named_variable(TokenIterator name)
+  {
+    std::size_t arg = this->identifier_constant(name);
+    this->emit_instruction(Instruction{OpCode::LOOKUP_GLOBAL, arg});
+  }
+
+  auto Parser::parse_variable(std::string err_msg) -> std::size_t
+  {
+    this->consume(Token::Type::IDENTIFIER, err_msg);
+    return this->identifier_constant(this->previous());
+  }
+
+  void Parser::define_variable(std::size_t global)
+  {
+    this->emit_instruction(Instruction{OpCode::DEFINE_GLOBAL, global});
+  }
+
+  auto Parser::identifier_constant(TokenIterator name) -> std::size_t
+  {
+    return this->chunk.insert_constant(Value(std::string(name->lexeme)));
   }
 
   auto Parser::check(Token::Type type) -> bool
@@ -660,18 +704,38 @@ namespace ss
 
   void Parser::declaration()
   {
-    this->statement();
+    if (this->advance_if_matches(Token::Type::LET)) {
+      this->let_statement();
+    } else {
+      this->statement();
+    }
   }
 
-  void Parser::print_statement() {
+  void Parser::print_statement()
+  {
     this->expression();
     this->consume(Token::Type::SEMICOLON, "expected ';' after value");
     this->emit_instruction(Instruction{OpCode::PRINT});
   }
 
-  void Parser::expression_statement() {
+  void Parser::expression_statement()
+  {
     this->expression();
     this->consume(Token::Type::SEMICOLON, "expected ';' after value");
     this->emit_instruction(Instruction{OpCode::POP});
+  }
+
+  void Parser::let_statement()
+  {
+    std::size_t global = this->parse_variable("expect variable name");
+
+    if (this->advance_if_matches(Token::Type::EQUAL)) {
+      this->expression();
+    } else {
+      this->emit_instruction(Instruction{OpCode::NIL});
+    }
+    this->consume(Token::Type::SEMICOLON, "expect ';' after variable declaration");
+
+    this->define_variable(global);
   }
 }  // namespace ss
