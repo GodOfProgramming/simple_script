@@ -82,6 +82,9 @@ namespace ss
         case OpCode::FALSE: {
           this->chunk->push_stack(Value(false));
         } break;
+        case OpCode::POP: {
+          this->chunk->pop_stack();
+        } break;
         case OpCode::EQUAL: {
           Value b = this->chunk->pop_stack();
           Value a = this->chunk->pop_stack();
@@ -179,6 +182,11 @@ namespace ss
 
   void VM::disassemble_instruction(Chunk& chunk, Instruction i, std::size_t offset) noexcept
   {
+#define SS_SIMPLE_PRINT_CASE(name)                    \
+  case OpCode::name: {                                \
+    this->config.write_line(to_string(OpCode::name)); \
+  } break;
+
     this->config.write(std::setw(4), std::setfill('0'), offset, ' ');
 
     if (offset > 0 && chunk.line_at(offset) == chunk.line_at(offset - 1)) {
@@ -190,9 +198,7 @@ namespace ss
     this->config.reset_ostream();
 
     switch (i.major_opcode) {
-      case OpCode::NO_OP: {
-        this->config.write_line(to_string(OpCode::NO_OP));
-      } break;
+      SS_SIMPLE_PRINT_CASE(NO_OP)
       case OpCode::CONSTANT: {
         Value constant = chunk.constant_at(i.modifying_bits);
         this->config.write(std::setw(16), std::left, to_string(OpCode::CONSTANT));
@@ -202,64 +208,31 @@ namespace ss
         this->config.write(" '", constant.to_string().c_str(), "'\n");
         this->config.reset_ostream();
       } break;
-      case OpCode::NIL: {
-        this->config.write_line(to_string(OpCode::NIL));
-      } break;
-      case OpCode::TRUE: {
-        this->config.write_line(to_string(OpCode::TRUE));
-      } break;
-      case OpCode::FALSE: {
-        this->config.write_line(to_string(OpCode::FALSE));
-      } break;
-      case OpCode::EQUAL: {
-        this->config.write_line(to_string(OpCode::EQUAL));
-      } break;
-      case OpCode::NOT_EQUAL: {
-        this->config.write_line(to_string(OpCode::NOT_EQUAL));
-      } break;
-      case OpCode::GREATER: {
-        this->config.write_line(to_string(OpCode::GREATER));
-      } break;
-      case OpCode::GREATER_EQUAL: {
-        this->config.write_line(to_string(OpCode::GREATER_EQUAL));
-      } break;
-      case OpCode::LESS: {
-        this->config.write_line(to_string(OpCode::LESS));
-      } break;
-      case OpCode::LESS_EQUAL: {
-        this->config.write_line(to_string(OpCode::LESS_EQUAL));
-      } break;
-      case OpCode::ADD: {
-        this->config.write_line(to_string(OpCode::ADD));
-      } break;
-      case OpCode::SUB: {
-        this->config.write_line(to_string(OpCode::SUB));
-      } break;
-      case OpCode::MUL: {
-        this->config.write_line(to_string(OpCode::MUL));
-      } break;
-      case OpCode::DIV: {
-        this->config.write_line(to_string(OpCode::DIV));
-      } break;
-      case OpCode::MOD: {
-        this->config.write_line(to_string(OpCode::MOD));
-      } break;
-      case OpCode::NEGATE: {
-        this->config.write_line(to_string(OpCode::NEGATE));
-      } break;
-      case OpCode::NOT: {
-        this->config.write_line(to_string(OpCode::NOT));
-      } break;
-      case OpCode::RETURN: {
-        this->config.write_line(to_string(OpCode::RETURN));
-      } break;
-      case OpCode::PRINT: {
-        this->config.write_line(to_string(OpCode::PRINT));
-      } break;
+        SS_SIMPLE_PRINT_CASE(NIL)
+        SS_SIMPLE_PRINT_CASE(TRUE)
+        SS_SIMPLE_PRINT_CASE(FALSE)
+        SS_SIMPLE_PRINT_CASE(POP)
+        SS_SIMPLE_PRINT_CASE(EQUAL)
+        SS_SIMPLE_PRINT_CASE(NOT_EQUAL)
+        SS_SIMPLE_PRINT_CASE(GREATER)
+        SS_SIMPLE_PRINT_CASE(GREATER_EQUAL)
+        SS_SIMPLE_PRINT_CASE(LESS)
+        SS_SIMPLE_PRINT_CASE(LESS_EQUAL)
+        SS_SIMPLE_PRINT_CASE(ADD)
+        SS_SIMPLE_PRINT_CASE(SUB)
+        SS_SIMPLE_PRINT_CASE(MUL)
+        SS_SIMPLE_PRINT_CASE(DIV)
+        SS_SIMPLE_PRINT_CASE(MOD)
+        SS_SIMPLE_PRINT_CASE(NOT)
+        SS_SIMPLE_PRINT_CASE(NEGATE)
+        SS_SIMPLE_PRINT_CASE(PRINT)
+        SS_SIMPLE_PRINT_CASE(RETURN)
       default: {
         this->config.write_line(to_string(i.major_opcode), ": ", static_cast<std::uint8_t>(i.major_opcode));
       } break;
     }
+
+#undef SS_SIMPLE_PRINT_CASE
   }
 
   void VM::print_stack() noexcept

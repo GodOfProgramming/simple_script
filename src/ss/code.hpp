@@ -15,6 +15,7 @@ namespace ss
     NIL,
     TRUE,
     FALSE,
+    POP,
     EQUAL,
     NOT_EQUAL,
     GREATER,
@@ -40,71 +41,38 @@ namespace ss
 
   constexpr auto to_string(OpCode op) noexcept -> const char*
   {
+#define SS_TO_STR(name) \
+  case OpCode::name: {  \
+    return #name;       \
+  }
     switch (op) {
-      case OpCode::NO_OP: {
-        return "NOOP";
-      }
-      case OpCode::CONSTANT: {
-        return "CONSTANT";
-      }
-      case OpCode::NIL: {
-        return "NIL";
-      }
-      case OpCode::TRUE: {
-        return "TRUE";
-      }
-      case OpCode::FALSE: {
-        return "FALSE";
-      }
-      case OpCode::EQUAL: {
-        return "EQUAL";
-      }
-      case OpCode::NOT_EQUAL: {
-        return "NOT_EQUAL";
-      }
-      case OpCode::GREATER: {
-        return "GREATER";
-      }
-      case OpCode::GREATER_EQUAL: {
-        return "GREATER_EQUAL";
-      }
-      case OpCode::LESS: {
-        return "LESS";
-      }
-      case OpCode::LESS_EQUAL: {
-        return "LESS_EQUAL";
-      }
-      case OpCode::ADD: {
-        return "ADD";
-      }
-      case OpCode::SUB: {
-        return "SUB";
-      }
-      case OpCode::MUL: {
-        return "MUL";
-      }
-      case OpCode::DIV: {
-        return "DIV";
-      }
-      case OpCode::MOD: {
-        return "MOD";
-      }
-      case OpCode::NOT: {
-        return "NOT";
-      }
-      case OpCode::NEGATE: {
-        return "NEGATE";
-      }
-      case OpCode::RETURN: {
-        return "RETURN";
-      }
-      case OpCode::PRINT: {
-        return "PRINT";
-      }
+      SS_TO_STR(NO_OP)
+      SS_TO_STR(CONSTANT)
+      SS_TO_STR(NIL)
+      SS_TO_STR(TRUE)
+      SS_TO_STR(FALSE)
+      SS_TO_STR(POP)
+      SS_TO_STR(EQUAL)
+      SS_TO_STR(NOT_EQUAL)
+      SS_TO_STR(GREATER)
+      SS_TO_STR(GREATER_EQUAL)
+      SS_TO_STR(LESS)
+      SS_TO_STR(LESS_EQUAL)
+      SS_TO_STR(ADD)
+      SS_TO_STR(SUB)
+      SS_TO_STR(MUL)
+      SS_TO_STR(DIV)
+      SS_TO_STR(MOD)
+      SS_TO_STR(NOT)
+      SS_TO_STR(NEGATE)
+      SS_TO_STR(PRINT)
+      SS_TO_STR(RETURN)
       default: {
         return "UNKNOWN";
       }
     }
+
+#undef SS_TO_STR
   }
 
   struct Token
@@ -285,7 +253,6 @@ namespace ss
     void parse_string();
     auto check(Token::Type type) -> bool;
     auto advance_if_matches(Token::Type type) -> bool;
-    void print_statement();
 
     void expression();
     void grouping();
@@ -293,7 +260,10 @@ namespace ss
     void binary();
     void literal();
 
-    void statement();
     void declaration();
+
+    void statement();
+    void print_statement();
+    void expression_statement();
   };
 }  // namespace ss

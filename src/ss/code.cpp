@@ -653,6 +653,8 @@ namespace ss
   {
     if (this->advance_if_matches(Token::Type::PRINT)) {
       this->print_statement();
+    } else {
+      this->expression_statement();
     }
   }
 
@@ -665,5 +667,11 @@ namespace ss
     this->expression();
     this->consume(Token::Type::SEMICOLON, "expected ';' after value");
     this->emit_instruction(Instruction{OpCode::PRINT});
+  }
+
+  void Parser::expression_statement() {
+    this->expression();
+    this->consume(Token::Type::SEMICOLON, "expected ';' after value");
+    this->emit_instruction(Instruction{OpCode::POP});
   }
 }  // namespace ss
