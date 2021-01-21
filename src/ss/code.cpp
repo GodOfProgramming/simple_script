@@ -416,7 +416,7 @@ namespace ss
   void Parser::parse()
   {
     for (this->iter = tokens.begin(); this->iter < tokens.end(); this->advance()) {
-      this->expression();
+      this->declaration();
     }
   }
 
@@ -454,7 +454,6 @@ namespace ss
   void Parser::parse_precedence(Precedence precedence)
   {
     this->advance();
-    std::cout << "getting rule for " << static_cast<int>(this->previous()->type) << '\n';
     ParseFn prefix_rule = this->rule_for(this->previous()->type).prefix;
     if (prefix_rule == nullptr) {
       this->error(this->previous(), "expected an expression");
@@ -541,6 +540,21 @@ namespace ss
   {
     Value v(std::string(this->previous()->lexeme));
     this->chunk.write_constant(v, this->previous()->line);
+  }
+
+  auto Parser::check(Token::Type type) -> bool
+  {
+    return this->iter->type == type;
+  }
+
+  auto Parser::advance_if_matches(Token::Type type) -> bool
+  {
+    if (!this->check(type)) {
+      return false;
+    }
+
+    this->advance();
+    return true;
   }
 
   void Parser::expression()
@@ -633,5 +647,23 @@ namespace ss
       default:  // unreachable
         THROW_COMPILETIME_ERROR("invalid literal type");
     }
+  }
+
+  void Parser::statement()
+  {
+    if (this->advance_if_matches(Token::Type::PRINT)) {
+      this->print_statement();
+    }
+  }
+
+  void Parser::declaration()
+  {
+    this->statement();
+  }
+
+  void Parser::print_statement() {
+    this->expression();
+    this->consume(Token::Type::SEMICOLON, "expected ';' after value");
+    this->emit_instruction(Instruction{OpCode::PRINT});
   }
 }  // namespace ss

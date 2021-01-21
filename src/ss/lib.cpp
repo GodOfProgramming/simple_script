@@ -7,9 +7,10 @@
 
 namespace
 {
-  constexpr bool SHOW_DISASSEMBLY = true;
-  constexpr bool PRINT_STACK      = true;
-  constexpr bool ECHO_INPUT       = true;
+  constexpr bool DISASSEMBLE_CHUNK = false;
+  constexpr bool SHOW_DISASSEMBLY  = false;
+  constexpr bool PRINT_STACK       = false;
+  constexpr bool ECHO_INPUT        = false;
 }  // namespace
 
 namespace ss
@@ -56,6 +57,9 @@ namespace ss
 
   void VM::run_chunk()
   {
+    if constexpr (DISASSEMBLE_CHUNK) {
+      this->disassemble_chunk("TODO", *this->chunk);
+    }
     while (this->ip < this->chunk->code.end()) {
       if constexpr (SHOW_DISASSEMBLY) {
         if constexpr (PRINT_STACK) {
@@ -139,10 +143,10 @@ namespace ss
         case OpCode::NEGATE: {
           this->chunk->push_stack(-this->chunk->pop_stack());
         } break;
+        case OpCode::PRINT: {
+          config.write_line(chunk->pop_stack());
+        } break;
         case OpCode::RETURN: {
-          if (!this->chunk->stack_empty()) {
-            this->config.write_line(this->chunk->pop_stack().to_string());
-          }
           return;
         } break;
         default: {
@@ -153,8 +157,6 @@ namespace ss
       }
       this->ip++;
     }
-
-    this->print_stack();
   }
 
   void VM::interpret(Chunk& chunk)
@@ -250,6 +252,9 @@ namespace ss
       } break;
       case OpCode::RETURN: {
         this->config.write_line(to_string(OpCode::RETURN));
+      } break;
+      case OpCode::PRINT: {
+        this->config.write_line(to_string(OpCode::PRINT));
       } break;
       default: {
         this->config.write_line(to_string(i.major_opcode), ": ", static_cast<std::uint8_t>(i.major_opcode));

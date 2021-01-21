@@ -347,4 +347,9 @@ namespace ss
   {
     return this->type() == t;
   }
+
+  auto operator<<(std::ostream& ostream, const Value& value) -> std::ostream&
+  {
+    return ostream << value.to_string();
+  }
 }  // namespace ss

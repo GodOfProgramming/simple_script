@@ -96,4 +96,6 @@ namespace ss
    private:
     std::variant<NilType, BoolType, NumberType, StringType> value;
   };
+
+  auto operator<<(std::ostream& ostream, const Value& value) -> std::ostream&;
 }  // namespace ss

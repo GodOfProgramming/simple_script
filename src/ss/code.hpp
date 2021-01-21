@@ -28,6 +28,7 @@ namespace ss
     MOD,
     NOT,
     NEGATE,
+    PRINT,
     RETURN,
   };
 
@@ -96,6 +97,9 @@ namespace ss
       }
       case OpCode::RETURN: {
         return "RETURN";
+      }
+      case OpCode::PRINT: {
+        return "PRINT";
       }
       default: {
         return "UNKNOWN";
@@ -279,11 +283,17 @@ namespace ss
     auto rule_for(Token::Type t) const noexcept -> const ParseRule&;
     void parse_number();
     void parse_string();
+    auto check(Token::Type type) -> bool;
+    auto advance_if_matches(Token::Type type) -> bool;
+    void print_statement();
 
     void expression();
     void grouping();
     void unary();
     void binary();
     void literal();
+
+    void statement();
+    void declaration();
   };
 }  // namespace ss
