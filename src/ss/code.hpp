@@ -12,44 +12,131 @@
  *
  * @return The string representation for the given enum
  */
-#define SS_ENUM_TO_STR_CASE(enum, name) \
-  case enum ::name: {                   \
-    return #name;                       \
+#define SS_ENUM_TO_STR_CASE(enum, name)                                                                                        \
+  case enum ::name: {                                                                                                          \
+    return #name;                                                                                                              \
   }
 
 namespace ss
 {
   enum class OpCode : std::uint8_t
   {
+    /**
+     * @brief No operation instruction
+     */
     NO_OP,
+    /**
+     * @brief Looks up a constant value. The index is specified by the modifying bits
+     */
     CONSTANT,
+    /**
+     * @brief Pushes a nil value on to the stack
+     */
     NIL,
+    /**
+     * @brief Pushes a true value on to the stack
+     */
     TRUE,
+    /**
+     * @brief Pushes a false value on to the stack
+     */
     FALSE,
+    /**
+     * @brief Pops a value off the stack
+     */
     POP,
+    /**
+     * @brief Pops N values off the stack. N is specified by the modifying bits
+     */
+    POP_N,
+    /**
+     * @brief Looks up a local variable. . The index in the stack is specified by the modifying bits
+     */
+    LOOKUP_LOCAL,
+    /**
+     * @brief Assigns a value to the local variable. The value comes off the top of the stack
+     */
+    ASSIGN_LOCAL,
+    /**
+     * @brief Looks up a global variable. The name is stored in the constant list. The index to then name is specified by the
+     * modifying bits
+     */
     LOOKUP_GLOBAL,
+    /**
+     * @brief Defines a new global variable. The name is stored in the constant list. The index to then name is specified by the
+     * modifying bits
+     */
     DEFINE_GLOBAL,
+    /**
+     * @brief Assigns a value to the global variable. The value comes off the top of the stack
+     */
     ASSIGN_GLOBAL,
+    /**
+     * @brief Pops two values off the stack, compares, then pushes the result back on
+     */
     EQUAL,
+    /**
+     * @brief Pops two values off the stack, compares, then pushes the result back on
+     */
     NOT_EQUAL,
+    /**
+     * @brief Pops two values off the stack, compares, then pushes the result back on
+     */
     GREATER,
+    /**
+     * @brief Pops two values off the stack, compares, then pushes the result back on
+     */
     GREATER_EQUAL,
+    /**
+     * @brief Pops two values off the stack, compares, then pushes the result back on
+     */
     LESS,
+    /**
+     * @brief Pops two values off the stack, compares, then pushes the result back on
+     */
     LESS_EQUAL,
+    /**
+     * @brief Pops two values off the stack, calculates the sum, then pushes the result back on
+     */
     ADD,
+    /**
+     * @brief Pops two values off the stack, calculates the difference, then pushes the result back on
+     */
     SUB,
+    /**
+     * @brief Pops two values off the stack, calculates the product, then pushes the result back on
+     */
     MUL,
+    /**
+     * @brief Pops two values off the stack, calculates the quotient, then pushes the result back on
+     */
     DIV,
+    /**
+     * @brief Pops two values off the stack, calculates the remainder, then pushes the result back on
+     */
     MOD,
+    /**
+     * @brief Pops a value off the stack, inverts its truthy value, then pushes that back on
+     */
     NOT,
+    /**
+     * @brief Pops a value off the stack, inverts its numarical value, then pushes that back on
+     */
     NEGATE,
+    /**
+     * @brief Pops a value off the stack and prints it to the screen
+     */
     PRINT,
+    /**
+     * @brief TODO
+     */
     RETURN,
   };
 
   struct Instruction
   {
-    OpCode      major_opcode   = OpCode::NO_OP;
+    OpCode major_opcode = OpCode::NO_OP;
+    // TODO set this up to be a union { struct { uint8_t, uint16_t, & uint32_t }; /* other combinations */ };
     std::size_t modifying_bits = 0;
   };
 
@@ -62,6 +149,9 @@ namespace ss
       SS_ENUM_TO_STR_CASE(OpCode, TRUE)
       SS_ENUM_TO_STR_CASE(OpCode, FALSE)
       SS_ENUM_TO_STR_CASE(OpCode, POP)
+      SS_ENUM_TO_STR_CASE(OpCode, POP_N)
+      SS_ENUM_TO_STR_CASE(OpCode, LOOKUP_LOCAL)
+      SS_ENUM_TO_STR_CASE(OpCode, ASSIGN_LOCAL)
       SS_ENUM_TO_STR_CASE(OpCode, LOOKUP_GLOBAL)
       SS_ENUM_TO_STR_CASE(OpCode, DEFINE_GLOBAL)
       SS_ENUM_TO_STR_CASE(OpCode, ASSIGN_GLOBAL)
@@ -214,6 +304,9 @@ namespace ss
     using CodeSegment  = std::vector<Instruction>;
     using CodeIterator = CodeSegment::iterator;
 
+    using IdentifierCache      = std::unordered_map<std::string_view, std::size_t>;
+    using IdentifierCacheEntry = IdentifierCache::const_iterator;
+
     /**
      * @brief Writes the instruction and tags it with the line
      */
@@ -251,6 +344,11 @@ namespace ss
     auto pop_stack() noexcept -> Value;
 
     /**
+     * @brief Pops values off the stack N times
+     */
+    void pop_stack_n(std::size_t n);
+
+    /**
      * @brief Check if the stack is empty
      *
      * @return True if the stack is empty, false otherwise
@@ -270,6 +368,20 @@ namespace ss
     auto peek_stack(std::size_t index = 0) const noexcept -> Value;
 
     /**
+     * @brief Access values on the stack directly by index. Indexing behaves as normal
+     *
+     * @return The value accessed by the index. If the index is out of bounds, behavior is undefined
+     */
+    auto index_stack(std::size_t index) const noexcept -> Value;
+
+    /**
+     * @brief Access values on the stack directly by index. Indexing behaves as normal
+     *
+     * @return A mutable reference to the value accessed by the index. If the index is out of bounds, behavior is undefined
+     */
+    auto index_stack_mut(std::size_t index) noexcept -> Value&;
+
+    /**
      * @brief Get the number of items on the stack
      *
      * @return The number of items on the stack
@@ -285,6 +397,16 @@ namespace ss
 
     auto instruction_count() const noexcept -> std::size_t;
 
+    auto find_ident(std::string_view name) const noexcept -> IdentifierCacheEntry;
+    auto is_entry_found(IdentifierCacheEntry entry) const noexcept -> bool;
+
+    /**
+     * @brief Adds the identifier to the cache
+     *
+     * @return The index in the list of constants
+     */
+    auto add_ident(std::string_view name) noexcept -> std::size_t;
+
     auto begin() noexcept -> CodeIterator;
     auto end() noexcept -> CodeIterator;
 
@@ -295,6 +417,7 @@ namespace ss
     std::vector<std::size_t> lines;
     std::size_t              last_line            = 0;
     std::size_t              instructions_on_line = 0;
+    IdentifierCache          identifier_cache;
 
     void add_line(std::size_t line) noexcept;
   };
@@ -331,6 +454,13 @@ namespace ss
     auto is_alpha(char c) const noexcept -> bool;
   };
 
+  struct Local
+  {
+    Token       name;
+    std::size_t depth;
+    bool        initialized;
+  };
+
   class Parser
   {
     using TokenList     = std::vector<Token>;
@@ -360,6 +490,18 @@ namespace ss
       Precedence precedence;
     };
 
+    struct VarLookup
+    {
+      enum class Type
+      {
+        LOCAL,
+        GLOBAL,
+      };
+
+      Type        type;
+      std::size_t index;
+    };
+
    public:
     Parser(TokenList&& tokens, BytecodeChunk& chunk) noexcept;
     ~Parser() = default;
@@ -367,10 +509,15 @@ namespace ss
     void parse();
 
    private:
-    TokenList                                         tokens;
-    TokenIterator                                     iter;
-    BytecodeChunk&                                    chunk;
-    std::unordered_map<std::string_view, std::size_t> identifier_cache;
+    TokenList          tokens;
+    TokenIterator      iter;
+    BytecodeChunk&     chunk;
+    std::vector<Local> locals;
+
+    /**
+     * @brief Current scope depth. 0 is the global namespace, depth > 0 creates local variables
+     */
+    std::size_t scope_depth;
 
     void write_instruction(Instruction i);
 
@@ -379,6 +526,8 @@ namespace ss
     void consume(Token::Type type, std::string err);
     void error(TokenIterator tok, std::string msg) const;
     void emit_instruction(Instruction i);
+    void begin_scope();
+    void end_scope();
 
     auto rule_for(Token::Type t) const noexcept -> const ParseRule&;
     void parse_precedence(Precedence p);
@@ -387,10 +536,18 @@ namespace ss
     void make_variable(bool assign);
     void named_variable(TokenIterator name, bool assign);
     auto parse_variable(std::string err_msg) -> std::size_t;
+    /**
+     * @brief Defines a new variable.
+     *
+     * @param global The index of the global variable in the chunk's constants. When defining a local variable, this will be 0
+     */
     void define_variable(std::size_t global);
+    void declare_variable();
     auto identifier_constant(TokenIterator name) -> std::size_t;
     auto check(Token::Type type) -> bool;
     auto advance_if_matches(Token::Type type) -> bool;
+    void add_local(TokenIterator token) noexcept;
+    auto resolve_local(TokenIterator token) const -> VarLookup;
 
     void expression();
     void grouping(bool can_assign);
@@ -404,23 +561,14 @@ namespace ss
     void print_statement();
     void expression_statement();
     void let_statement();
-  };
-
-  struct Local
-  {
-    Token       name;
-    std::size_t depth;
+    void block_statement();
   };
 
   class Compiler
   {
    public:
-    Compiler();
+    Compiler() = default;
     void compile(std::string& src, BytecodeChunk& chunk);
-
-   private:
-    std::vector<Local> locals;
-    std::size_t        scope_depth;
   };
 
 }  // namespace ss

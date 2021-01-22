@@ -12,6 +12,7 @@ class TestVM: public testing::Test
 {
  public:
   void SetUp() override
+
   {
     this->ostream = std::make_shared<std::ostringstream>();
     this->vm      = std::make_shared<VM>(VMConfig(&std::cin, this->ostream.get()));

@@ -70,6 +70,11 @@ namespace ss
     return v;
   }
 
+  void BytecodeChunk::pop_stack_n(std::size_t n)
+  {
+    this->stack.erase(this->stack.begin() + (this->stack.size() - n), this->stack.end());
+  }
+
   auto BytecodeChunk::stack_empty() const noexcept -> bool
   {
     return this->stack.empty();
@@ -116,6 +121,16 @@ namespace ss
     return this->stack[this->stack_size() - 1 - index];
   }
 
+  auto BytecodeChunk::index_stack(std::size_t index) const noexcept -> Value
+  {
+    return this->stack[index];
+  }
+
+  auto BytecodeChunk::index_stack_mut(std::size_t index) noexcept -> Value&
+  {
+    return this->stack[index];
+  }
+
   auto BytecodeChunk::stack_size() const noexcept -> std::size_t
   {
     return this->stack.size();
@@ -134,6 +149,23 @@ namespace ss
   auto BytecodeChunk::end() noexcept -> CodeIterator
   {
     return this->code.end();
+  }
+
+  auto BytecodeChunk::find_ident(std::string_view name) const noexcept -> IdentifierCacheEntry
+  {
+    return this->identifier_cache.find(name);
+  }
+
+  auto BytecodeChunk::is_entry_found(IdentifierCacheEntry entry) const noexcept -> bool
+  {
+    return entry != this->identifier_cache.end();
+  }
+
+  auto BytecodeChunk::add_ident(std::string_view name) noexcept -> std::size_t
+  {
+    auto indx                    = this->insert_constant(Value(std::string(name)));
+    this->identifier_cache[name] = indx;
+    return indx;
   }
 
   Scanner::Scanner(std::string& src) noexcept: source(src), current(source.begin()), line(1), column(1) {}
@@ -447,7 +479,7 @@ namespace ss
     return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || c == '@';
   }
 
-  Parser::Parser(TokenList&& t, BytecodeChunk& c) noexcept: tokens(std::move(t)), chunk(c) {}
+  Parser::Parser(TokenList&& t, BytecodeChunk& c) noexcept: tokens(std::move(t)), chunk(c), scope_depth(0) {}
 
   void Parser::parse()
   {
@@ -486,6 +518,24 @@ namespace ss
   void Parser::emit_instruction(Instruction i)
   {
     this->chunk.write(i, this->previous()->line);
+  }
+
+  void Parser::begin_scope()
+  {
+    this->scope_depth++;
+  }
+
+  void Parser::end_scope()
+  {
+    this->scope_depth--;
+
+    std::size_t count = 0;
+    while (!this->locals.empty() && this->locals.back().depth > this->scope_depth) {
+      this->locals.pop_back();
+      count++;
+    }
+
+    this->emit_instruction(Instruction{OpCode::POP_N, count});
   }
 
   auto Parser::rule_for(Token::Type t) const noexcept -> const ParseRule&
@@ -593,34 +643,70 @@ namespace ss
   {
     std::size_t arg = this->identifier_constant(name);
 
+    auto lookup = this->resolve_local(name);
+
+    OpCode get, set;
+    if (lookup.type == VarLookup::Type::LOCAL) {
+      get = OpCode::LOOKUP_LOCAL;
+      set = OpCode::ASSIGN_LOCAL;
+    } else if (lookup.type == VarLookup::Type::GLOBAL) {
+      get = OpCode::LOOKUP_GLOBAL;
+      set = OpCode::ASSIGN_GLOBAL;
+    } else {
+      // impossible for now
+      std::stringstream ss;
+      ss << "invalid lookup type for var '" << name->lexeme << "'";
+      THROW_RUNTIME_ERROR(ss.str());
+    }
+
     if (can_assign && this->advance_if_matches(Token::Type::EQUAL)) {
       this->expression();
-      this->emit_instruction(Instruction{OpCode::ASSIGN_GLOBAL, arg});
+      this->emit_instruction(Instruction{set, arg});
     } else {
-      this->emit_instruction(Instruction{OpCode::LOOKUP_GLOBAL, arg});
+      this->emit_instruction(Instruction{get, arg});
     }
   }
 
   auto Parser::parse_variable(std::string err_msg) -> std::size_t
   {
     this->consume(Token::Type::IDENTIFIER, err_msg);
-    return this->identifier_constant(this->previous());
+    this->declare_variable();
+    return this->scope_depth > 0 ? 0 : this->identifier_constant(this->previous());
   }
 
   void Parser::define_variable(std::size_t global)
   {
-    this->emit_instruction(Instruction{OpCode::DEFINE_GLOBAL, global});
+    if (this->scope_depth == 0) {
+      this->emit_instruction(Instruction{OpCode::DEFINE_GLOBAL, global});
+    } else {
+      this->locals.back().initialized = true;
+    }
+  }
+
+  void Parser::declare_variable()
+  {
+    if (this->scope_depth > 0) {
+      auto name = this->previous();
+      for (auto local = this->locals.rbegin(); local != this->locals.rend(); local++) {
+        if (local->initialized && local->depth < this->scope_depth) {
+          break;
+        }
+
+        if (name->lexeme == local->name.lexeme) {
+          this->error(name, "variable with same name already delcared in scope");
+        }
+      }
+      this->add_local(name);
+    }
   }
 
   auto Parser::identifier_constant(TokenIterator name) -> std::size_t
   {
-    auto entry = this->identifier_cache.find(name->lexeme);
-    if (entry == this->identifier_cache.end()) {
-      auto indx = this->chunk.insert_constant(Value(std::string(name->lexeme)));
-      this->identifier_cache.emplace(name->lexeme, indx);
-      return indx;
-    } else {
+    auto entry = this->chunk.find_ident(name->lexeme);
+    if (this->chunk.is_entry_found(entry)) {
       return entry->second;
+    } else {
+      return this->chunk.add_ident(name->lexeme);
     }
   }
 
@@ -637,6 +723,36 @@ namespace ss
 
     this->advance();
     return true;
+  }
+
+  void Parser::add_local(TokenIterator name) noexcept
+  {
+    Local local;
+    local.name        = *name;
+    local.depth       = this->scope_depth;
+    local.initialized = false;
+    this->locals.push_back(local);
+  }
+
+  auto Parser::resolve_local(TokenIterator name) const -> VarLookup
+  {
+    std::size_t index = this->locals.size() - 1;
+    for (auto local = this->locals.rbegin(); local != this->locals.rend(); local++, index--) {
+      if (name->lexeme == local->name.lexeme) {
+        if (!local->initialized) {
+          this->error(name, "can't read variable in it's own initializer");
+        }
+        return VarLookup{
+         .type  = VarLookup::Type::LOCAL,
+         .index = index,
+        };
+      }
+    }
+
+    return VarLookup{
+     .type  = VarLookup::Type::GLOBAL,
+     .index = 0,
+    };
   }
 
   void Parser::expression()
@@ -735,6 +851,10 @@ namespace ss
   {
     if (this->advance_if_matches(Token::Type::PRINT)) {
       this->print_statement();
+    } else if (this->advance_if_matches(Token::Type::LEFT_BRACE)) {
+      this->begin_scope();
+      this->block_statement();
+      this->end_scope();
     } else {
       this->expression_statement();
     }
@@ -777,7 +897,14 @@ namespace ss
     this->define_variable(global);
   }
 
-  Compiler::Compiler(): scope_depth(0) {}
+  void Parser::block_statement()
+  {
+    while (!this->check(Token::Type::RIGHT_BRACE) && !this->check(Token::Type::END_OF_FILE)) {
+      this->declaration();
+    }
+
+    this->consume(Token::Type::RIGHT_BRACE, "expect '}' after block");
+  }
 
   void Compiler::compile(std::string& src, BytecodeChunk& chunk)
   {

@@ -2,18 +2,18 @@
 #include "ss/code.hpp"
 #include <gtest/gtest.h>
 
+using ss::BytecodeChunk;
 using ss::Instruction;
 using ss::OpCode;
-using ss::BytecodeChunk;
 using ss::Value;
 
-class TestState: public testing::Test
+class TestBytecodeChunk: public testing::Test
 {
  protected:
   BytecodeChunk chunk;
 };
 
-TEST_F(TestState, METHOD(write, writing_adds_the_correct_line))
+TEST_F(TestBytecodeChunk, METHOD(write, writing_adds_the_correct_line))
 {
   this->chunk.write(Instruction{OpCode::RETURN}, 1);
   this->chunk.write(Instruction{OpCode::RETURN}, 1);
@@ -24,7 +24,7 @@ TEST_F(TestState, METHOD(write, writing_adds_the_correct_line))
   EXPECT_EQ(this->chunk.line_at(2), 2);
 }
 
-TEST_F(TestState, METHOD(write_constant, can_write_constant))
+TEST_F(TestBytecodeChunk, METHOD(write_constant, can_write_constant))
 {
   this->chunk.write_constant(Value(), 1);
   this->chunk.write_constant(Value(1.0), 1);
@@ -39,7 +39,7 @@ TEST_F(TestState, METHOD(write_constant, can_write_constant))
   EXPECT_EQ(this->chunk.constant_at(2), Value("str"));
 }
 
-TEST_F(TestState, METHOD(push_stack__pop_stack, can_push_onto_stack_and_pop))
+TEST_F(TestBytecodeChunk, METHOD(push_stack__pop_stack, can_push_onto_stack_and_pop))
 {
   EXPECT_TRUE(this->chunk.stack_empty());
 
@@ -54,6 +54,22 @@ TEST_F(TestState, METHOD(push_stack__pop_stack, can_push_onto_stack_and_pop))
   EXPECT_EQ(this->chunk.pop_stack(), Value());
 
   EXPECT_TRUE(this->chunk.stack_empty());
+}
+
+TEST_F(TestBytecodeChunk, METHOD(pop_stack_n, removes_the_specified_range))
+{
+  for (int i = 0; i < 10; i++) {
+    this->chunk.push_stack(Value(1.0 * i));
+  }
+
+  EXPECT_EQ(this->chunk.stack_size(), 10);
+
+  this->chunk.pop_stack_n(5);
+
+  EXPECT_EQ(this->chunk.stack_size(), 5);
+  for (int i = 4; i < 0; i--) {
+    EXPECT_EQ(this->chunk.pop_stack(), Value(1.0 * i));
+  }
 }
 
 using ss::OpCode;
@@ -157,6 +173,7 @@ TEST(Scanner, METHOD(scan, some_code))
 }
 
 using ss::Instruction;
+using ss::Local;
 using ss::OpCode;
 using ss::Parser;
 

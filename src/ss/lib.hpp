@@ -25,10 +25,10 @@ namespace ss
     void test();
 
    private:
-    VMConfig            config;
+    VMConfig                    config;
     BytecodeChunk*              chunk;
     BytecodeChunk::CodeIterator ip;
-    GlobalMap           globals;
+    GlobalMap                   globals;
 
     void run();
 
@@ -37,7 +37,5 @@ namespace ss
 
     void disassemble_chunk(std::string name, BytecodeChunk& chunk) noexcept;
     void disassemble_instruction(BytecodeChunk& chunk, Instruction i, std::size_t offset) noexcept;
-
-    void print_stack() noexcept;
   };
 }  // namespace ss

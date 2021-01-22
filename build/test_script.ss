@@ -6,3 +6,9 @@ let b = " ";
 let c = "world";
 test = a+b+c;
 print test;
+
+{
+  let x = test;
+
+  print x;
+}

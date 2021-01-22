@@ -74,7 +74,7 @@ namespace ss
     while (this->ip < this->chunk->end()) {
       if constexpr (SHOW_DISASSEMBLY) {
         if constexpr (PRINT_STACK) {
-          this->print_stack();
+          this->chunk->print_stack(this->config);
         }
         this->disassemble_instruction(*this->chunk, *this->ip, this->ip - this->chunk->begin());
       }
@@ -96,6 +96,15 @@ namespace ss
         } break;
         case OpCode::POP: {
           this->chunk->pop_stack();
+        } break;
+        case OpCode::POP_N: {
+          this->chunk->pop_stack_n(this->ip->modifying_bits);
+        } break;
+        case OpCode::LOOKUP_LOCAL: {
+          this->chunk->push_stack(this->chunk->index_stack(this->ip->modifying_bits));
+        } break;
+        case OpCode::ASSIGN_LOCAL: {
+          this->chunk->index_stack_mut(this->ip->modifying_bits) = this->chunk->peek_stack();
         } break;
         case OpCode::LOOKUP_GLOBAL: {
           Value name_value = this->chunk->constant_at(this->ip->modifying_bits);
@@ -234,9 +243,9 @@ namespace ss
 
   void VM::disassemble_instruction(BytecodeChunk& chunk, Instruction i, std::size_t offset) noexcept
   {
-#define SS_SIMPLE_PRINT_CASE(name)         \
-  case OpCode::name: {                     \
-    this->config.write_line(OpCode::name); \
+#define SS_SIMPLE_PRINT_CASE(name)                                                                                             \
+  case OpCode::name: {                                                                                                         \
+    this->config.write_line(OpCode::name);                                                                                     \
   } break;
 
     this->config.write(std::setw(4), std::setfill('0'), offset, ' ');
@@ -264,6 +273,9 @@ namespace ss
         SS_SIMPLE_PRINT_CASE(TRUE)
         SS_SIMPLE_PRINT_CASE(FALSE)
         SS_SIMPLE_PRINT_CASE(POP)
+        SS_SIMPLE_PRINT_CASE(POP_N)
+        SS_SIMPLE_PRINT_CASE(LOOKUP_LOCAL)
+        SS_SIMPLE_PRINT_CASE(ASSIGN_LOCAL)
         SS_SIMPLE_PRINT_CASE(LOOKUP_GLOBAL)
         SS_SIMPLE_PRINT_CASE(DEFINE_GLOBAL)
         SS_SIMPLE_PRINT_CASE(ASSIGN_GLOBAL)
@@ -289,5 +301,4 @@ namespace ss
 
 #undef SS_SIMPLE_PRINT_CASE
   }
-
 }  // namespace ss
