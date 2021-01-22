@@ -20,21 +20,17 @@ class TestVM: public testing::Test
   std::shared_ptr<VM>                 vm;
 };
 
-TEST(VM, prints_correctly)
+TEST_F(TestVM, prints_correctly)
 {
-  std::ostringstream oss;
-  VMConfig           config(&std::cin, &oss);
-  VM                 vm(config);
-
 #define TEST_SCRIPT(src) #src
   const char* script = {
 #include "scripts/print_script.ss"
   };
 #undef TEST_SCRIPT
 
-  vm.run_script(script);
+  this->vm->run_script(script);
 
-  ASSERT_EQ(oss.str(), "true\nhello world\n");
+  ASSERT_EQ(this->ostream->str(), "true\nhello world\n");
 }
 
 TEST_F(TestVM, setting_and_getting_vars)
