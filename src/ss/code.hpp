@@ -357,11 +357,6 @@ namespace ss
     auto stack_empty() const noexcept -> bool;
 
     /**
-     * @brief Prints the stack to the given output stream
-     */
-    void print_stack(VMConfig& cfg) const noexcept;
-
-    /**
      * @brief Access values on the stack by index. Index 0 being the hightest part
      *
      * @return The value accessed by the index. If the index is out of bounds, behavior is undefined
@@ -413,7 +408,17 @@ namespace ss
     auto lookup_local(std::size_t index) -> std::string_view;
 
     auto begin() noexcept -> CodeIterator;
+
     auto end() noexcept -> CodeIterator;
+
+    /**
+     * @brief Prints the stack to the given output stream
+     */
+    void print_stack(VMConfig& cfg) const noexcept;
+
+    void print_constants(VMConfig& cfg) const noexcept;
+
+    void print_local_map(VMConfig& cfg) const noexcept;
 
    private:
     CodeSegment              code;

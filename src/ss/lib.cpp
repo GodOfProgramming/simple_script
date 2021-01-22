@@ -63,8 +63,14 @@ namespace ss
     if constexpr (DISASSEMBLE_CHUNK) {
       this->disassemble_chunk("TODO", *this->chunk);
     }
+    if constexpr (PRINT_CONSTANTS) {
+      this->chunk->print_constants(this->config);
+    }
+    if constexpr (PRINT_LOCAL_MAPPING) {
+      this->chunk->print_local_map(this->config);
+    }
     while (this->ip < this->chunk->end()) {
-      if constexpr (SHOW_DISASSEMBLY) {
+      if constexpr (DISASSEMBLE_INSTRUCTIONS) {
         if constexpr (PRINT_STACK) {
           this->chunk->print_stack(this->config);
         }
@@ -262,7 +268,7 @@ namespace ss
         this->config.reset_ostream();
         this->config.write(' ', std::setw(4), i.modifying_bits);
         this->config.reset_ostream();
-        this->config.write(" '", constant.to_string().c_str(), "'\n");
+        this->config.write(" '", constant.to_string(), "'\n");
         this->config.reset_ostream();
       })
       SS_SIMPLE_PRINT_CASE(NIL)
@@ -279,18 +285,42 @@ namespace ss
         this->config.write(" '", name, "'\n");
         this->config.reset_ostream();
       })
-      SS_SIMPLE_PRINT_CASE(ASSIGN_LOCAL)
+      SS_COMPLEX_PRINT_CASE(ASSIGN_LOCAL, {
+        auto name = chunk.lookup_local(i.modifying_bits);
+        this->config.write(std::setw(16), std::left, OpCode::ASSIGN_LOCAL);
+        this->config.reset_ostream();
+        this->config.write(' ', std::setw(4), i.modifying_bits);
+        this->config.reset_ostream();
+        this->config.write(" '", name, "'\n");
+        this->config.reset_ostream();
+      })
       SS_COMPLEX_PRINT_CASE(LOOKUP_GLOBAL, {
         Value constant = chunk.constant_at(i.modifying_bits);
         this->config.write(std::setw(16), std::left, OpCode::LOOKUP_GLOBAL);
         this->config.reset_ostream();
         this->config.write(' ', std::setw(4), i.modifying_bits);
         this->config.reset_ostream();
-        this->config.write(" '", constant.to_string().c_str(), "'\n");
+        this->config.write(" '", constant.to_string(), "'\n");
         this->config.reset_ostream();
       })
-      SS_SIMPLE_PRINT_CASE(DEFINE_GLOBAL)
-      SS_SIMPLE_PRINT_CASE(ASSIGN_GLOBAL)
+      SS_COMPLEX_PRINT_CASE(DEFINE_GLOBAL, {
+        Value constant = chunk.constant_at(i.modifying_bits);
+        this->config.write(std::setw(16), std::left, OpCode::DEFINE_GLOBAL);
+        this->config.reset_ostream();
+        this->config.write(' ', std::setw(4), i.modifying_bits);
+        this->config.reset_ostream();
+        this->config.write(" '", constant.to_string(), "'\n");
+        this->config.reset_ostream();
+      })
+      SS_COMPLEX_PRINT_CASE(ASSIGN_GLOBAL, {
+        Value constant = chunk.constant_at(i.modifying_bits);
+        this->config.write(std::setw(16), std::left, OpCode::DEFINE_GLOBAL);
+        this->config.reset_ostream();
+        this->config.write(' ', std::setw(4), i.modifying_bits);
+        this->config.reset_ostream();
+        this->config.write(" '", constant.to_string(), "'\n");
+        this->config.reset_ostream();
+      })
       SS_SIMPLE_PRINT_CASE(EQUAL)
       SS_SIMPLE_PRINT_CASE(NOT_EQUAL)
       SS_SIMPLE_PRINT_CASE(GREATER)

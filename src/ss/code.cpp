@@ -92,19 +92,6 @@ namespace ss
     }
   }
 
-  void BytecodeChunk::print_stack(VMConfig& cfg) const noexcept
-  {
-    cfg.write("        | ");
-    if (this->stack_empty()) {
-      cfg.write_line("[ ]");
-    } else {
-      for (const auto& value : this->stack) {
-        cfg.write("[ ", value.to_string(), " ]");
-      }
-      cfg.write_line();
-    }
-  }
-
   auto BytecodeChunk::line_at(std::size_t offset) const noexcept -> std::size_t
   {
     std::size_t accum = 0;
@@ -180,6 +167,35 @@ namespace ss
   auto BytecodeChunk::lookup_local(std::size_t index) -> std::string_view
   {
     return this->local_cache[index];
+  }
+
+  void BytecodeChunk::print_stack(VMConfig& cfg) const noexcept
+  {
+    cfg.write("        | ");
+    if (this->stack_empty()) {
+      cfg.write_line("[ ]");
+    } else {
+      for (const auto& value : this->stack) {
+        cfg.write("[ ", value.to_string(), " ]");
+      }
+      cfg.write_line();
+    }
+  }
+
+  void BytecodeChunk::print_constants(VMConfig& cfg) const noexcept
+  {
+    cfg.write_line("CONSTANTS");
+    for (std::size_t i = 0; i < this->constants.size(); i++) {
+      cfg.write_line(i, "=", this->constant_at(i));
+    }
+  }
+
+  void BytecodeChunk::print_local_map(VMConfig& cfg) const noexcept
+  {
+    cfg.write_line("LOCALS");
+    for (const auto& pair : this->local_cache) {
+      cfg.write_line(pair.first, "=", pair.second);
+    }
   }
 
   Scanner::Scanner(std::string& src) noexcept: source(src), current(source.begin()), line(1), column(1) {}
@@ -655,17 +671,18 @@ namespace ss
 
   void Parser::named_variable(TokenIterator name, bool can_assign)
   {
-    std::size_t arg = this->identifier_constant(name);
-
     auto lookup = this->resolve_local(name);
 
-    OpCode get, set;
+    OpCode      get, set;
+    std::size_t index;
     if (lookup.type == VarLookup::Type::LOCAL) {
-      get = OpCode::LOOKUP_LOCAL;
-      set = OpCode::ASSIGN_LOCAL;
+      get   = OpCode::LOOKUP_LOCAL;
+      set   = OpCode::ASSIGN_LOCAL;
+      index = lookup.index;
     } else if (lookup.type == VarLookup::Type::GLOBAL) {
-      get = OpCode::LOOKUP_GLOBAL;
-      set = OpCode::ASSIGN_GLOBAL;
+      get   = OpCode::LOOKUP_GLOBAL;
+      set   = OpCode::ASSIGN_GLOBAL;
+      index = this->identifier_constant(name);
     } else {
       // impossible for now
       std::stringstream ss;
@@ -675,9 +692,9 @@ namespace ss
 
     if (can_assign && this->advance_if_matches(Token::Type::EQUAL)) {
       this->expression();
-      this->emit_instruction(Instruction{set, arg});
+      this->emit_instruction(Instruction{set, index});
     } else {
-      this->emit_instruction(Instruction{get, arg});
+      this->emit_instruction(Instruction{get, index});
     }
   }
 
@@ -747,7 +764,7 @@ namespace ss
     local.initialized = false;
     this->locals.push_back(local);
 
-    if constexpr (DISASSEMBLE_CHUNK || SHOW_DISASSEMBLY) {
+    if constexpr (DISASSEMBLE_CHUNK || DISASSEMBLE_INSTRUCTIONS) {
       this->chunk.add_local(this->locals.size() - 1, std::string(name->lexeme));
     }
   }
