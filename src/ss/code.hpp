@@ -372,6 +372,7 @@ namespace ss
     TokenList     tokens;
     TokenIterator iter;
     State&        state;
+    std::unordered_map<std::string_view, std::size_t> identifier_cache;
 
     void write_instruction(Instruction i);
 

@@ -625,7 +625,14 @@ namespace ss
 
   auto Parser::identifier_constant(TokenIterator name) -> std::size_t
   {
-    return this->state.insert_constant(Value(std::string(name->lexeme)));
+    auto entry = this->identifier_cache.find(name->lexeme);
+    if (entry == this->identifier_cache.end()) {
+      auto indx = this->state.insert_constant(Value(std::string(name->lexeme)));
+      this->identifier_cache.emplace(name->lexeme, indx);
+      return indx;
+    } else {
+      return entry->second;
+    }
   }
 
   auto Parser::check(Token::Type type) -> bool
