@@ -306,6 +306,7 @@ namespace ss
 
     using IdentifierCache      = std::unordered_map<std::string_view, std::size_t>;
     using IdentifierCacheEntry = IdentifierCache::const_iterator;
+    using LocalCache           = std::unordered_map<std::size_t, std::string>;
 
     /**
      * @brief Writes the instruction and tags it with the line
@@ -407,6 +408,10 @@ namespace ss
      */
     auto add_ident(std::string_view name) noexcept -> std::size_t;
 
+    void add_local(std::size_t index, std::string name);
+
+    auto lookup_local(std::size_t index) -> std::string_view;
+
     auto begin() noexcept -> CodeIterator;
     auto end() noexcept -> CodeIterator;
 
@@ -418,6 +423,7 @@ namespace ss
     std::size_t              last_line            = 0;
     std::size_t              instructions_on_line = 0;
     IdentifierCache          identifier_cache;
+    LocalCache               local_cache;
 
     void add_line(std::size_t line) noexcept;
   };

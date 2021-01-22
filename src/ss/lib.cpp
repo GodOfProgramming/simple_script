@@ -5,14 +5,6 @@
 #include <iostream>
 #include <sstream>
 
-namespace
-{
-  constexpr bool DISASSEMBLE_CHUNK = false;
-  constexpr bool SHOW_DISASSEMBLY  = false;
-  constexpr bool PRINT_STACK       = false;
-  constexpr bool ECHO_INPUT        = false;
-}  // namespace
-
 namespace ss
 {
   VM::VM(VMConfig cfg): config(cfg), chunk(nullptr) {}
@@ -248,6 +240,10 @@ namespace ss
     this->config.write_line(OpCode::name);                                                                                     \
   } break;
 
+#define SS_COMPLEX_PRINT_CASE(name, block)                                                                                     \
+  case OpCode::name:                                                                                                           \
+    block break;
+
     this->config.write(std::setw(4), std::setfill('0'), offset, ' ');
 
     if (offset > 0 && chunk.line_at(offset) == chunk.line_at(offset - 1)) {
@@ -260,7 +256,7 @@ namespace ss
 
     switch (i.major_opcode) {
       SS_SIMPLE_PRINT_CASE(NO_OP)
-      case OpCode::CONSTANT: {
+      SS_COMPLEX_PRINT_CASE(CONSTANT, {
         Value constant = chunk.constant_at(i.modifying_bits);
         this->config.write(std::setw(16), std::left, OpCode::CONSTANT);
         this->config.reset_ostream();
@@ -268,32 +264,48 @@ namespace ss
         this->config.reset_ostream();
         this->config.write(" '", constant.to_string().c_str(), "'\n");
         this->config.reset_ostream();
-      } break;
-        SS_SIMPLE_PRINT_CASE(NIL)
-        SS_SIMPLE_PRINT_CASE(TRUE)
-        SS_SIMPLE_PRINT_CASE(FALSE)
-        SS_SIMPLE_PRINT_CASE(POP)
-        SS_SIMPLE_PRINT_CASE(POP_N)
-        SS_SIMPLE_PRINT_CASE(LOOKUP_LOCAL)
-        SS_SIMPLE_PRINT_CASE(ASSIGN_LOCAL)
-        SS_SIMPLE_PRINT_CASE(LOOKUP_GLOBAL)
-        SS_SIMPLE_PRINT_CASE(DEFINE_GLOBAL)
-        SS_SIMPLE_PRINT_CASE(ASSIGN_GLOBAL)
-        SS_SIMPLE_PRINT_CASE(EQUAL)
-        SS_SIMPLE_PRINT_CASE(NOT_EQUAL)
-        SS_SIMPLE_PRINT_CASE(GREATER)
-        SS_SIMPLE_PRINT_CASE(GREATER_EQUAL)
-        SS_SIMPLE_PRINT_CASE(LESS)
-        SS_SIMPLE_PRINT_CASE(LESS_EQUAL)
-        SS_SIMPLE_PRINT_CASE(ADD)
-        SS_SIMPLE_PRINT_CASE(SUB)
-        SS_SIMPLE_PRINT_CASE(MUL)
-        SS_SIMPLE_PRINT_CASE(DIV)
-        SS_SIMPLE_PRINT_CASE(MOD)
-        SS_SIMPLE_PRINT_CASE(NOT)
-        SS_SIMPLE_PRINT_CASE(NEGATE)
-        SS_SIMPLE_PRINT_CASE(PRINT)
-        SS_SIMPLE_PRINT_CASE(RETURN)
+      })
+      SS_SIMPLE_PRINT_CASE(NIL)
+      SS_SIMPLE_PRINT_CASE(TRUE)
+      SS_SIMPLE_PRINT_CASE(FALSE)
+      SS_SIMPLE_PRINT_CASE(POP)
+      SS_SIMPLE_PRINT_CASE(POP_N)
+      SS_COMPLEX_PRINT_CASE(LOOKUP_LOCAL, {
+        auto name = chunk.lookup_local(i.modifying_bits);
+        this->config.write(std::setw(16), std::left, OpCode::LOOKUP_LOCAL);
+        this->config.reset_ostream();
+        this->config.write(' ', std::setw(4), i.modifying_bits);
+        this->config.reset_ostream();
+        this->config.write(" '", name, "'\n");
+        this->config.reset_ostream();
+      })
+      SS_SIMPLE_PRINT_CASE(ASSIGN_LOCAL)
+      SS_COMPLEX_PRINT_CASE(LOOKUP_GLOBAL, {
+        Value constant = chunk.constant_at(i.modifying_bits);
+        this->config.write(std::setw(16), std::left, OpCode::LOOKUP_GLOBAL);
+        this->config.reset_ostream();
+        this->config.write(' ', std::setw(4), i.modifying_bits);
+        this->config.reset_ostream();
+        this->config.write(" '", constant.to_string().c_str(), "'\n");
+        this->config.reset_ostream();
+      })
+      SS_SIMPLE_PRINT_CASE(DEFINE_GLOBAL)
+      SS_SIMPLE_PRINT_CASE(ASSIGN_GLOBAL)
+      SS_SIMPLE_PRINT_CASE(EQUAL)
+      SS_SIMPLE_PRINT_CASE(NOT_EQUAL)
+      SS_SIMPLE_PRINT_CASE(GREATER)
+      SS_SIMPLE_PRINT_CASE(GREATER_EQUAL)
+      SS_SIMPLE_PRINT_CASE(LESS)
+      SS_SIMPLE_PRINT_CASE(LESS_EQUAL)
+      SS_SIMPLE_PRINT_CASE(ADD)
+      SS_SIMPLE_PRINT_CASE(SUB)
+      SS_SIMPLE_PRINT_CASE(MUL)
+      SS_SIMPLE_PRINT_CASE(DIV)
+      SS_SIMPLE_PRINT_CASE(MOD)
+      SS_SIMPLE_PRINT_CASE(NOT)
+      SS_SIMPLE_PRINT_CASE(NEGATE)
+      SS_SIMPLE_PRINT_CASE(PRINT)
+      SS_SIMPLE_PRINT_CASE(RETURN)
       default: {
         this->config.write_line(i.major_opcode, ": ", i.modifying_bits);
       } break;

@@ -5,6 +5,11 @@
 
 namespace ss
 {
+  constexpr bool DISASSEMBLE_CHUNK = false;
+  constexpr bool SHOW_DISASSEMBLY  = true;
+  constexpr bool PRINT_STACK       = true;
+  constexpr bool ECHO_INPUT        = false;
+
   template <typename T>
   concept Writable = requires(T& t)
   {

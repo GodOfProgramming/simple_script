@@ -95,10 +95,14 @@ namespace ss
   void BytecodeChunk::print_stack(VMConfig& cfg) const noexcept
   {
     cfg.write("        | ");
-    for (const auto& value : this->stack) {
-      cfg.write("[ ", value.to_string(), " ]");
+    if (this->stack_empty()) {
+      cfg.write_line("[ ]");
+    } else {
+      for (const auto& value : this->stack) {
+        cfg.write("[ ", value.to_string(), " ]");
+      }
+      cfg.write_line();
     }
-    cfg.write_line();
   }
 
   auto BytecodeChunk::line_at(std::size_t offset) const noexcept -> std::size_t
@@ -166,6 +170,16 @@ namespace ss
     auto indx                    = this->insert_constant(Value(std::string(name)));
     this->identifier_cache[name] = indx;
     return indx;
+  }
+
+  void BytecodeChunk::add_local(std::size_t index, std::string name)
+  {
+    this->local_cache.emplace(index, name);
+  }
+
+  auto BytecodeChunk::lookup_local(std::size_t index) -> std::string_view
+  {
+    return this->local_cache[index];
   }
 
   Scanner::Scanner(std::string& src) noexcept: source(src), current(source.begin()), line(1), column(1) {}
@@ -732,6 +746,10 @@ namespace ss
     local.depth       = this->scope_depth;
     local.initialized = false;
     this->locals.push_back(local);
+
+    if constexpr (DISASSEMBLE_CHUNK || SHOW_DISASSEMBLY) {
+      this->chunk.add_local(this->locals.size() - 1, std::string(name->lexeme));
+    }
   }
 
   auto Parser::resolve_local(TokenIterator name) const -> VarLookup
