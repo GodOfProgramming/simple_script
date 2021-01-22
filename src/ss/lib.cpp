@@ -7,7 +7,7 @@
 
 namespace
 {
-  constexpr bool DISASSEMBLE_CHUNK = true;
+  constexpr bool DISASSEMBLE_CHUNK = false;
   constexpr bool SHOW_DISASSEMBLY  = false;
   constexpr bool PRINT_STACK       = false;
   constexpr bool ECHO_INPUT        = false;
@@ -67,7 +67,8 @@ namespace ss
         }
         this->disassemble_instruction(*this->state, *this->ip, this->ip - this->state->begin());
       }
-      switch (static_cast<OpCode>(this->ip->major_opcode)) {
+
+      switch (this->ip->major_opcode) {
         case OpCode::NO_OP:
           break;
         case OpCode::CONSTANT: {
@@ -94,7 +95,7 @@ namespace ss
           auto              var  = this->globals.find(name);
           if (var == this->globals.end()) {
             std::stringstream ss;
-            ss << "tried using undefined variable '" << name << '\'';
+            ss << "variable '" << name << "' is undefined";
             THROW_RUNTIME_ERROR(ss.str());
           }
           this->state->push_stack(var->second);
@@ -107,10 +108,23 @@ namespace ss
           Value::StringType name = name_value.string();
           if (this->globals.find(name) != this->globals.end()) {
             std::stringstream ss;
-            ss << "variable '" << name << "' already defined";
+            ss << "variable '" << name << "' is already defined";
             THROW_RUNTIME_ERROR(ss.str());
           }
           this->globals.emplace(name, this->state->pop_stack());
+        } break;
+        case OpCode::ASSIGN_GLOBAL: {
+          Value name_value = this->state->constant_at(this->ip->modifying_bits);
+          if (!name_value.is_type(Value::Type::String)) {
+            THROW_RUNTIME_ERROR("invalid type for variable name");
+          }
+          Value::StringType name = name_value.string();
+          if (this->globals.find(name) == this->globals.end()) {
+            std::stringstream ss;
+            ss << "variable '" << name << "' is undefined";
+            THROW_RUNTIME_ERROR(ss.str());
+          }
+          this->globals[name] = this->state->peek_stack();
         } break;
         case OpCode::EQUAL: {
           Value b = this->state->pop_stack();
@@ -181,7 +195,7 @@ namespace ss
         } break;
         default: {
           std::stringstream ss;
-          ss << "invalid op code: " << static_cast<std::uint32_t>(this->ip->major_opcode);
+          ss << "invalid op code: " << static_cast<std::size_t>(this->ip->major_opcode);
           THROW_RUNTIME_ERROR(ss.str());
         }
       }
@@ -241,6 +255,7 @@ namespace ss
         SS_SIMPLE_PRINT_CASE(POP)
         SS_SIMPLE_PRINT_CASE(LOOKUP_GLOBAL)
         SS_SIMPLE_PRINT_CASE(DEFINE_GLOBAL)
+        SS_SIMPLE_PRINT_CASE(ASSIGN_GLOBAL)
         SS_SIMPLE_PRINT_CASE(EQUAL)
         SS_SIMPLE_PRINT_CASE(NOT_EQUAL)
         SS_SIMPLE_PRINT_CASE(GREATER)

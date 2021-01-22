@@ -29,6 +29,7 @@ namespace ss
     POP,
     LOOKUP_GLOBAL,
     DEFINE_GLOBAL,
+    ASSIGN_GLOBAL,
     EQUAL,
     NOT_EQUAL,
     GREATER,
@@ -63,6 +64,7 @@ namespace ss
       SS_ENUM_TO_STR_CASE(OpCode, POP)
       SS_ENUM_TO_STR_CASE(OpCode, LOOKUP_GLOBAL)
       SS_ENUM_TO_STR_CASE(OpCode, DEFINE_GLOBAL)
+      SS_ENUM_TO_STR_CASE(OpCode, ASSIGN_GLOBAL)
       SS_ENUM_TO_STR_CASE(OpCode, EQUAL)
       SS_ENUM_TO_STR_CASE(OpCode, NOT_EQUAL)
       SS_ENUM_TO_STR_CASE(OpCode, GREATER)
@@ -261,6 +263,20 @@ namespace ss
     void print_stack(VMConfig& cfg) const noexcept;
 
     /**
+     * @brief Access values on the stack by index. Index 0 being the hightest part
+     *
+     * @return The value accessed by the index. If the index is out of bounds, behavior is undefined
+     */
+    auto peek_stack(std::size_t index = 0) const noexcept -> Value;
+
+    /**
+     * @brief Get the number of items on the stack
+     *
+     * @return The number of items on the stack
+     */
+    auto stack_size() const noexcept -> std::size_t;
+
+    /**
      * @brief Grabs the line at the given offset
      *
      * @return The line number
@@ -337,7 +353,7 @@ namespace ss
       PRIMARY,
     };
 
-    using ParseFn = std::function<void(Parser*)>;
+    using ParseFn = std::function<void(Parser*, bool)>;
 
     struct ParseRule
     {
@@ -367,10 +383,10 @@ namespace ss
 
     auto rule_for(Token::Type t) const noexcept -> const ParseRule&;
     void parse_precedence(Precedence p);
-    void make_number();
-    void make_string();
-    void make_variable();
-    void named_variable(TokenIterator name);
+    void make_number(bool can_assign);
+    void make_string(bool can_assign);
+    void make_variable(bool assign);
+    void named_variable(TokenIterator name, bool assign);
     auto parse_variable(std::string err_msg) -> std::size_t;
     void define_variable(std::size_t global);
     auto identifier_constant(TokenIterator name) -> std::size_t;
@@ -378,10 +394,10 @@ namespace ss
     auto advance_if_matches(Token::Type type) -> bool;
 
     void expression();
-    void grouping();
-    void unary();
-    void binary();
-    void literal();
+    void grouping(bool can_assign);
+    void unary(bool can_assign);
+    void binary(bool can_assign);
+    void literal(bool can_assign);
 
     void declaration();
 

@@ -111,6 +111,16 @@ namespace ss
     return line;
   }
 
+  auto State::peek_stack(std::size_t index) const noexcept -> Value
+  {
+    return this->stack[this->stack_size() - 1 - index];
+  }
+
+  auto State::stack_size() const noexcept -> std::size_t
+  {
+    return this->stack.size();
+  }
+
   auto State::instruction_count() const noexcept -> std::size_t
   {
     return this->code.size();
@@ -547,16 +557,21 @@ namespace ss
       this->error(this->previous(), "expected an expression");
     }
 
-    prefix_rule(this);
+    bool can_assign = precedence <= Precedence::ASSIGNMENT;
+    prefix_rule(this, can_assign);
 
-    while (static_cast<size_t>(precedence) <= static_cast<std::size_t>(this->rule_for(this->iter->type).precedence)) {
+    while (precedence <= this->rule_for(this->iter->type).precedence) {
       this->advance();
       ParseFn infix_rule = this->rule_for(this->previous()->type).infix;
-      infix_rule(this);
+      infix_rule(this, can_assign);
+    }
+
+    if (can_assign && this->advance_if_matches(Token::Type::EQUAL)) {
+      this->error(this->previous(), "invalid assignment target");
     }
   }
 
-  void Parser::make_number()
+  void Parser::make_number(bool)
   {
     auto lexeme = this->previous()->lexeme;
 
@@ -574,21 +589,27 @@ namespace ss
     this->state.write_constant(v, this->previous()->line);
   }
 
-  void Parser::make_string()
+  void Parser::make_string(bool)
   {
     Value v(std::string(this->previous()->lexeme));
     this->state.write_constant(v, this->previous()->line);
   }
 
-  void Parser::make_variable()
+  void Parser::make_variable(bool can_assign)
   {
-    this->named_variable(this->previous());
+    this->named_variable(this->previous(), can_assign);
   }
 
-  void Parser::named_variable(TokenIterator name)
+  void Parser::named_variable(TokenIterator name, bool can_assign)
   {
     std::size_t arg = this->identifier_constant(name);
-    this->emit_instruction(Instruction{OpCode::LOOKUP_GLOBAL, arg});
+
+    if (can_assign && this->advance_if_matches(Token::Type::EQUAL)) {
+      this->expression();
+      this->emit_instruction(Instruction{OpCode::ASSIGN_GLOBAL, arg});
+    } else {
+      this->emit_instruction(Instruction{OpCode::LOOKUP_GLOBAL, arg});
+    }
   }
 
   auto Parser::parse_variable(std::string err_msg) -> std::size_t
@@ -627,13 +648,13 @@ namespace ss
     this->parse_precedence(Precedence::ASSIGNMENT);
   }
 
-  void Parser::grouping()
+  void Parser::grouping(bool)
   {
     this->expression();
     this->consume(Token::Type::RIGHT_PAREN, "expect ')' after expression");
   }
 
-  void Parser::unary()
+  void Parser::unary(bool)
   {
     Token::Type operator_type = this->previous()->type;
 
@@ -651,7 +672,7 @@ namespace ss
     }
   }
 
-  void Parser::binary()
+  void Parser::binary(bool)
   {
     Token::Type operator_type = this->previous()->type;
 
@@ -697,7 +718,7 @@ namespace ss
     }
   }
 
-  void Parser::literal()
+  void Parser::literal(bool)
   {
     switch (this->previous()->type) {
       case Token::Type::NIL: {
