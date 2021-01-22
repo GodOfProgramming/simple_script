@@ -19,6 +19,9 @@ namespace ss
     auto repl(VMConfig cfg = VMConfig::basic) -> int;
     void run_script(std::string src);
 
+    void set_var(Value::StringType name, Value value) noexcept;
+    auto get_var(Value::StringType name) noexcept -> Value;
+
     void test();
 
    private:

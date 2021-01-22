@@ -17,6 +17,16 @@ namespace ss
 {
   VM::VM(VMConfig cfg): config(cfg), state(nullptr) {}
 
+  void VM::set_var(Value::StringType name, Value value) noexcept
+  {
+    this->globals[name] = value;
+  }
+
+  auto VM::get_var(Value::StringType name) noexcept -> Value
+  {
+    return this->globals[name];
+  }
+
   auto VM::repl(VMConfig cfg) -> int
   {
     VM          vm(cfg);
