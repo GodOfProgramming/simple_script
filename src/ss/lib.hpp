@@ -10,8 +10,7 @@ namespace ss
 {
   class VM
   {
-    using InstructionPointer = std::vector<Instruction>::iterator;
-    using GlobalMap          = std::unordered_map<Value::StringType, Value>;
+    using GlobalMap = std::unordered_map<Value::StringType, Value>;
 
    public:
     VM(VMConfig cfg = VMConfig::basic);
@@ -23,18 +22,18 @@ namespace ss
     void test();
 
    private:
-    VMConfig           config;
-    Chunk*             chunk;
-    InstructionPointer ip;
-    GlobalMap          globals;
+    VMConfig            config;
+    State*              state;
+    State::CodeIterator ip;
+    GlobalMap           globals;
 
     void run();
 
-    void interpret(Chunk& chunk);
+    void interpret(State& state);
     void run_chunk();
 
-    void disassemble_chunk(std::string name, Chunk& chunk) noexcept;
-    void disassemble_instruction(Chunk& chunk, Instruction i, std::size_t offset) noexcept;
+    void disassemble_chunk(std::string name, State& state) noexcept;
+    void disassemble_instruction(State& state, Instruction i, std::size_t offset) noexcept;
 
     void print_stack() noexcept;
   };

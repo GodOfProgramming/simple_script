@@ -1,11 +1,17 @@
 #pragma once
 
+#include "cfg.hpp"
 #include "datatypes.hpp"
 #include <cinttypes>
 #include <string>
 #include <vector>
 #include <functional>
 
+/**
+ * @brief Case statement for any to_string() enum function
+ *
+ * @return The string representation for the given enum
+ */
 #define SS_ENUM_TO_STR_CASE(enum, name) \
   case enum ::name: {                   \
     return #name;                       \
@@ -200,9 +206,12 @@ namespace ss
   auto operator<<(std::ostream& ostream, const Token::Type& type) -> std::ostream&;
   auto operator<<(std::ostream& ostream, const Token& token) -> std::ostream&;
 
-  class Chunk
+  class State
   {
    public:
+    using CodeSegment  = std::vector<Instruction>;
+    using CodeIterator = CodeSegment::iterator;
+
     /**
      * @brief Writes the instruction and tags it with the line
      */
@@ -258,9 +267,13 @@ namespace ss
      */
     auto line_at(std::size_t offset) const noexcept -> std::size_t;
 
-    std::vector<Instruction> code;
+    auto instruction_count() const noexcept -> std::size_t;
+
+    auto begin() noexcept -> CodeIterator;
+    auto end() noexcept -> CodeIterator;
 
    private:
+    CodeSegment              code;
     std::vector<Value>       constants;
     std::vector<Value>       stack;
     std::vector<std::size_t> lines;
@@ -270,7 +283,7 @@ namespace ss
     void add_line(std::size_t line) noexcept;
   };
 
-  void compile(std::string& src, Chunk& chunk);
+  void compile(std::string& src, State& state);
 
   class Scanner
   {
@@ -334,7 +347,7 @@ namespace ss
     };
 
    public:
-    Parser(TokenList&& tokens, Chunk& chunk) noexcept;
+    Parser(TokenList&& tokens, State& state) noexcept;
     ~Parser() = default;
 
     void parse();
@@ -342,7 +355,7 @@ namespace ss
    private:
     TokenList     tokens;
     TokenIterator iter;
-    Chunk&        chunk;
+    State&        state;
 
     void write_instruction(Instruction i);
 

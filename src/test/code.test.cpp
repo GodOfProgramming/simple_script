@@ -2,58 +2,58 @@
 #include "ss/code.hpp"
 #include <gtest/gtest.h>
 
-using ss::Chunk;
+using ss::State;
 using ss::Instruction;
 using ss::OpCode;
 using ss::Value;
 
-TEST(Chunk, METHOD(write, writing_adds_the_correct_line))
+TEST(State, METHOD(write, writing_adds_the_correct_line))
 {
-  Chunk chunk;
+  State state;
 
-  chunk.write(Instruction{OpCode::RETURN}, 1);
-  chunk.write(Instruction{OpCode::RETURN}, 1);
-  chunk.write(Instruction{OpCode::RETURN}, 2);
+  state.write(Instruction{OpCode::RETURN}, 1);
+  state.write(Instruction{OpCode::RETURN}, 1);
+  state.write(Instruction{OpCode::RETURN}, 2);
 
-  EXPECT_EQ(chunk.line_at(0), 1);
-  EXPECT_EQ(chunk.line_at(1), 1);
-  EXPECT_EQ(chunk.line_at(2), 2);
+  EXPECT_EQ(state.line_at(0), 1);
+  EXPECT_EQ(state.line_at(1), 1);
+  EXPECT_EQ(state.line_at(2), 2);
 }
 
-TEST(Chunk, METHOD(write_constant, can_write_constant))
+TEST(State, METHOD(write_constant, can_write_constant))
 {
-  Chunk chunk;
+  State state;
 
-  chunk.write_constant(Value(), 1);
-  chunk.write_constant(Value(1.0), 1);
-  chunk.write_constant(Value("str"), 2);
+  state.write_constant(Value(), 1);
+  state.write_constant(Value(1.0), 1);
+  state.write_constant(Value("str"), 2);
 
-  EXPECT_EQ(chunk.line_at(0), 1);
-  EXPECT_EQ(chunk.line_at(1), 1);
-  EXPECT_EQ(chunk.line_at(2), 2);
+  EXPECT_EQ(state.line_at(0), 1);
+  EXPECT_EQ(state.line_at(1), 1);
+  EXPECT_EQ(state.line_at(2), 2);
 
-  EXPECT_EQ(chunk.constant_at(0), Value());
-  EXPECT_EQ(chunk.constant_at(1), Value(1.0));
-  EXPECT_EQ(chunk.constant_at(2), Value("str"));
+  EXPECT_EQ(state.constant_at(0), Value());
+  EXPECT_EQ(state.constant_at(1), Value(1.0));
+  EXPECT_EQ(state.constant_at(2), Value("str"));
 }
 
-TEST(Chunk, METHOD(push_stack__pop_stack, can_push_onto_stack_and_pop))
+TEST(State, METHOD(push_stack__pop_stack, can_push_onto_stack_and_pop))
 {
-  Chunk chunk;
+  State state;
 
-  EXPECT_TRUE(chunk.stack_empty());
+  EXPECT_TRUE(state.stack_empty());
 
-  chunk.push_stack(Value());
-  chunk.push_stack(Value(1.0));
-  chunk.push_stack(Value("str"));
+  state.push_stack(Value());
+  state.push_stack(Value(1.0));
+  state.push_stack(Value("str"));
 
-  EXPECT_FALSE(chunk.stack_empty());
+  EXPECT_FALSE(state.stack_empty());
 
-  EXPECT_EQ(chunk.pop_stack(), Value("str"));
-  EXPECT_EQ(chunk.pop_stack(), Value(1.0));
-  EXPECT_EQ(chunk.pop_stack(), Value());
+  EXPECT_EQ(state.pop_stack(), Value("str"));
+  EXPECT_EQ(state.pop_stack(), Value(1.0));
+  EXPECT_EQ(state.pop_stack(), Value());
 
-  EXPECT_TRUE(chunk.stack_empty());
+  EXPECT_TRUE(state.stack_empty());
 }
 
 using ss::OpCode;
@@ -167,9 +167,9 @@ TEST(Parser, METHOD(parse, some_math))
 
   auto tokens = scanner.scan();
 
-  Chunk chunk;
+  State state;
 
-  Parser parser(std::move(tokens), chunk);
+  Parser parser(std::move(tokens), state);
 
   EXPECT_NO_THROW(parser.parse());
 
@@ -188,5 +188,5 @@ TEST(Parser, METHOD(parse, some_math))
     Instruction{OpCode::POP},
   };
 
-  ASSERT_EQ(expected.size(), chunk.code.size());
+  ASSERT_EQ(expected.size(), state.instruction_count());
 }

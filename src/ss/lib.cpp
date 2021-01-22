@@ -15,7 +15,7 @@ namespace
 
 namespace ss
 {
-  VM::VM(VMConfig cfg): config(cfg), chunk(nullptr) {}
+  VM::VM(VMConfig cfg): config(cfg), state(nullptr) {}
 
   auto VM::repl(VMConfig cfg) -> int
   {
@@ -48,45 +48,45 @@ namespace ss
 
   void VM::run_script(std::string src)
   {
-    Chunk chunk;
+    State state;
 
-    compile(src, chunk);
+    compile(src, state);
 
-    this->interpret(chunk);
+    this->interpret(state);
   }
 
   void VM::run_chunk()
   {
     if constexpr (DISASSEMBLE_CHUNK) {
-      this->disassemble_chunk("TODO", *this->chunk);
+      this->disassemble_chunk("TODO", *this->state);
     }
-    while (this->ip < this->chunk->code.end()) {
+    while (this->ip < this->state->end()) {
       if constexpr (SHOW_DISASSEMBLY) {
         if constexpr (PRINT_STACK) {
           this->print_stack();
         }
-        this->disassemble_instruction(*this->chunk, *this->ip, this->ip - this->chunk->code.begin());
+        this->disassemble_instruction(*this->state, *this->ip, this->ip - this->state->begin());
       }
       switch (static_cast<OpCode>(this->ip->major_opcode)) {
         case OpCode::NO_OP:
           break;
         case OpCode::CONSTANT: {
-          this->chunk->push_stack(this->chunk->constant_at(this->ip->modifying_bits));
+          this->state->push_stack(this->state->constant_at(this->ip->modifying_bits));
         } break;
         case OpCode::NIL: {
-          this->chunk->push_stack(Value());
+          this->state->push_stack(Value());
         } break;
         case OpCode::TRUE: {
-          this->chunk->push_stack(Value(true));
+          this->state->push_stack(Value(true));
         } break;
         case OpCode::FALSE: {
-          this->chunk->push_stack(Value(false));
+          this->state->push_stack(Value(false));
         } break;
         case OpCode::POP: {
-          this->chunk->pop_stack();
+          this->state->pop_stack();
         } break;
         case OpCode::LOOKUP_GLOBAL: {
-          Value name_value = this->chunk->constant_at(this->ip->modifying_bits);
+          Value name_value = this->state->constant_at(this->ip->modifying_bits);
           if (!name_value.is_type(Value::Type::String)) {
             THROW_RUNTIME_ERROR("invalid type for variable name");
           }
@@ -97,10 +97,10 @@ namespace ss
             ss << "tried using undefined variable '" << name << '\'';
             THROW_RUNTIME_ERROR(ss.str());
           }
-          this->chunk->push_stack(var->second);
+          this->state->push_stack(var->second);
         } break;
         case OpCode::DEFINE_GLOBAL: {
-          Value name_value = this->chunk->constant_at(this->ip->modifying_bits);
+          Value name_value = this->state->constant_at(this->ip->modifying_bits);
           if (!name_value.is_type(Value::Type::String)) {
             THROW_RUNTIME_ERROR("invalid type for variable name");
           }
@@ -110,71 +110,71 @@ namespace ss
             ss << "variable '" << name << "' already defined";
             THROW_RUNTIME_ERROR(ss.str());
           }
-          this->globals.emplace(name, this->chunk->pop_stack());
+          this->globals.emplace(name, this->state->pop_stack());
         } break;
         case OpCode::EQUAL: {
-          Value b = this->chunk->pop_stack();
-          Value a = this->chunk->pop_stack();
-          this->chunk->push_stack(a == b);
+          Value b = this->state->pop_stack();
+          Value a = this->state->pop_stack();
+          this->state->push_stack(a == b);
         } break;
         case OpCode::NOT_EQUAL: {
-          Value b = this->chunk->pop_stack();
-          Value a = this->chunk->pop_stack();
-          this->chunk->push_stack(a != b);
+          Value b = this->state->pop_stack();
+          Value a = this->state->pop_stack();
+          this->state->push_stack(a != b);
         } break;
         case OpCode::GREATER: {
-          Value b = this->chunk->pop_stack();
-          Value a = this->chunk->pop_stack();
-          this->chunk->push_stack(a > b);
+          Value b = this->state->pop_stack();
+          Value a = this->state->pop_stack();
+          this->state->push_stack(a > b);
         } break;
         case OpCode::GREATER_EQUAL: {
-          Value b = this->chunk->pop_stack();
-          Value a = this->chunk->pop_stack();
-          this->chunk->push_stack(a >= b);
+          Value b = this->state->pop_stack();
+          Value a = this->state->pop_stack();
+          this->state->push_stack(a >= b);
         } break;
         case OpCode::LESS: {
-          Value b = this->chunk->pop_stack();
-          Value a = this->chunk->pop_stack();
-          this->chunk->push_stack(a < b);
+          Value b = this->state->pop_stack();
+          Value a = this->state->pop_stack();
+          this->state->push_stack(a < b);
         } break;
         case OpCode::LESS_EQUAL: {
-          Value b = this->chunk->pop_stack();
-          Value a = this->chunk->pop_stack();
-          this->chunk->push_stack(a <= b);
+          Value b = this->state->pop_stack();
+          Value a = this->state->pop_stack();
+          this->state->push_stack(a <= b);
         } break;
         case OpCode::ADD: {
-          Value b = this->chunk->pop_stack();
-          Value a = this->chunk->pop_stack();
-          this->chunk->push_stack(a + b);
+          Value b = this->state->pop_stack();
+          Value a = this->state->pop_stack();
+          this->state->push_stack(a + b);
         } break;
         case OpCode::SUB: {
-          Value b = this->chunk->pop_stack();
-          Value a = this->chunk->pop_stack();
-          this->chunk->push_stack(a - b);
+          Value b = this->state->pop_stack();
+          Value a = this->state->pop_stack();
+          this->state->push_stack(a - b);
         } break;
         case OpCode::MUL: {
-          Value b = this->chunk->pop_stack();
-          Value a = this->chunk->pop_stack();
-          this->chunk->push_stack(a * b);
+          Value b = this->state->pop_stack();
+          Value a = this->state->pop_stack();
+          this->state->push_stack(a * b);
         } break;
         case OpCode::DIV: {
-          Value b = this->chunk->pop_stack();
-          Value a = this->chunk->pop_stack();
-          this->chunk->push_stack(a / b);
+          Value b = this->state->pop_stack();
+          Value a = this->state->pop_stack();
+          this->state->push_stack(a / b);
         } break;
         case OpCode::MOD: {
-          Value b = this->chunk->pop_stack();
-          Value a = this->chunk->pop_stack();
-          this->chunk->push_stack(a % b);
+          Value b = this->state->pop_stack();
+          Value a = this->state->pop_stack();
+          this->state->push_stack(a % b);
         } break;
         case OpCode::NOT: {
-          this->chunk->push_stack(!this->chunk->pop_stack());
+          this->state->push_stack(!this->state->pop_stack());
         } break;
         case OpCode::NEGATE: {
-          this->chunk->push_stack(-this->chunk->pop_stack());
+          this->state->push_stack(-this->state->pop_stack());
         } break;
         case OpCode::PRINT: {
-          config.write_line(chunk->pop_stack());
+          config.write_line(state->pop_stack());
         } break;
         case OpCode::RETURN: {
           return;
@@ -189,25 +189,25 @@ namespace ss
     }
   }
 
-  void VM::interpret(Chunk& chunk)
+  void VM::interpret(State& state)
   {
-    this->chunk = &chunk;
-    this->ip    = this->chunk->code.begin();
+    this->state = &state;
+    this->ip    = this->state->begin();
 
     this->run_chunk();
   }
 
-  void VM::disassemble_chunk(std::string name, Chunk& chunk) noexcept
+  void VM::disassemble_chunk(std::string name, State& state) noexcept
   {
     this->config.write_line("== ", name, " ==");
 
     std::size_t offset = 0;
-    for (const auto& i : chunk.code) {
-      this->disassemble_instruction(chunk, i, offset++);
+    for (const auto& i : state) {
+      this->disassemble_instruction(state, i, offset++);
     }
   }
 
-  void VM::disassemble_instruction(Chunk& chunk, Instruction i, std::size_t offset) noexcept
+  void VM::disassemble_instruction(State& state, Instruction i, std::size_t offset) noexcept
   {
 #define SS_SIMPLE_PRINT_CASE(name)         \
   case OpCode::name: {                     \
@@ -216,10 +216,10 @@ namespace ss
 
     this->config.write(std::setw(4), std::setfill('0'), offset, ' ');
 
-    if (offset > 0 && chunk.line_at(offset) == chunk.line_at(offset - 1)) {
+    if (offset > 0 && state.line_at(offset) == state.line_at(offset - 1)) {
       this->config.write("   | ");
     } else {
-      this->config.write(std::setw(4), std::setfill('0'), chunk.line_at(offset), ' ');
+      this->config.write(std::setw(4), std::setfill('0'), state.line_at(offset), ' ');
     }
 
     this->config.reset_ostream();
@@ -227,7 +227,7 @@ namespace ss
     switch (i.major_opcode) {
       SS_SIMPLE_PRINT_CASE(NO_OP)
       case OpCode::CONSTANT: {
-        Value constant = chunk.constant_at(i.modifying_bits);
+        Value constant = state.constant_at(i.modifying_bits);
         this->config.write(std::setw(16), std::left, OpCode::CONSTANT);
         this->config.reset_ostream();
         this->config.write(' ', std::setw(4), i.modifying_bits);

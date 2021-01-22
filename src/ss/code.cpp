@@ -1,4 +1,3 @@
-#include "cfg.hpp"
 #include "code.hpp"
 #include "datatypes.hpp"
 #include "exceptions.hpp"
@@ -32,13 +31,13 @@ namespace ss
                    << ", column: " << token.column << " }";
   }
 
-  void Chunk::write(Instruction i, std::size_t line) noexcept
+  void State::write(Instruction i, std::size_t line) noexcept
   {
     this->code.push_back(i);
     this->add_line(line);
   }
 
-  void Chunk::write_constant(Value v, std::size_t line) noexcept
+  void State::write_constant(Value v, std::size_t line) noexcept
   {
     this->constants.push_back(v);
     Instruction i{
@@ -48,35 +47,35 @@ namespace ss
     this->write(i, line);
   }
 
-  auto Chunk::insert_constant(Value v) noexcept -> std::size_t
+  auto State::insert_constant(Value v) noexcept -> std::size_t
   {
     this->constants.push_back(v);
     return this->constants.size() - 1;
   }
 
-  auto Chunk::constant_at(std::size_t offset) const noexcept -> Value
+  auto State::constant_at(std::size_t offset) const noexcept -> Value
   {
     return this->constants[offset];
   }
 
-  void Chunk::push_stack(Value v) noexcept
+  void State::push_stack(Value v) noexcept
   {
     this->stack.push_back(v);
   }
 
-  auto Chunk::pop_stack() noexcept -> Value
+  auto State::pop_stack() noexcept -> Value
   {
     Value v = this->stack.back();
     this->stack.pop_back();
     return v;
   }
 
-  auto Chunk::stack_empty() const noexcept -> bool
+  auto State::stack_empty() const noexcept -> bool
   {
     return this->stack.empty();
   }
 
-  void Chunk::add_line(std::size_t line) noexcept
+  void State::add_line(std::size_t line) noexcept
   {
     if (this->last_line == line) {
       // same line number
@@ -88,7 +87,7 @@ namespace ss
     }
   }
 
-  void Chunk::print_stack(VMConfig& cfg) const noexcept
+  void State::print_stack(VMConfig& cfg) const noexcept
   {
     cfg.write("        | ");
     for (const auto& value : this->stack) {
@@ -97,7 +96,7 @@ namespace ss
     cfg.write_line();
   }
 
-  auto Chunk::line_at(std::size_t offset) const noexcept -> std::size_t
+  auto State::line_at(std::size_t offset) const noexcept -> std::size_t
   {
     std::size_t accum = 0;
     std::size_t line  = 0;
@@ -112,13 +111,28 @@ namespace ss
     return line;
   }
 
-  void compile(std::string& src, Chunk& chunk)
+  auto State::instruction_count() const noexcept -> std::size_t
+  {
+    return this->code.size();
+  }
+
+  auto State::begin() noexcept -> CodeIterator
+  {
+    return this->code.begin();
+  }
+
+  auto State::end() noexcept -> CodeIterator
+  {
+    return this->code.end();
+  }
+
+  void compile(std::string& src, State& state)
   {
     Scanner scanner(src);
 
     auto tokens = scanner.scan();
 
-    Parser parser(std::move(tokens), chunk);
+    Parser parser(std::move(tokens), state);
 
     parser.parse();
   }
@@ -434,7 +448,7 @@ namespace ss
     return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || c == '@';
   }
 
-  Parser::Parser(TokenList&& t, Chunk& c) noexcept: tokens(std::move(t)), chunk(c) {}
+  Parser::Parser(TokenList&& t, State& c) noexcept: tokens(std::move(t)), state(c) {}
 
   void Parser::parse()
   {
@@ -472,7 +486,7 @@ namespace ss
 
   void Parser::emit_instruction(Instruction i)
   {
-    this->chunk.write(i, this->previous()->line);
+    this->state.write(i, this->previous()->line);
   }
 
   auto Parser::rule_for(Token::Type t) const noexcept -> const ParseRule&
@@ -557,13 +571,13 @@ namespace ss
       this->error(this->previous(), "unparsable number");
     }
 
-    this->chunk.write_constant(v, this->previous()->line);
+    this->state.write_constant(v, this->previous()->line);
   }
 
   void Parser::make_string()
   {
     Value v(std::string(this->previous()->lexeme));
-    this->chunk.write_constant(v, this->previous()->line);
+    this->state.write_constant(v, this->previous()->line);
   }
 
   void Parser::make_variable()
@@ -590,7 +604,7 @@ namespace ss
 
   auto Parser::identifier_constant(TokenIterator name) -> std::size_t
   {
-    return this->chunk.insert_constant(Value(std::string(name->lexeme)));
+    return this->state.insert_constant(Value(std::string(name->lexeme)));
   }
 
   auto Parser::check(Token::Type type) -> bool
