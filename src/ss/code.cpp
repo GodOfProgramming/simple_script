@@ -31,13 +31,13 @@ namespace ss
                    << ", column: " << token.column << " }";
   }
 
-  void State::write(Instruction i, std::size_t line) noexcept
+  void BytecodeChunk::write(Instruction i, std::size_t line) noexcept
   {
     this->code.push_back(i);
     this->add_line(line);
   }
 
-  void State::write_constant(Value v, std::size_t line) noexcept
+  void BytecodeChunk::write_constant(Value v, std::size_t line) noexcept
   {
     this->constants.push_back(v);
     Instruction i{
@@ -47,35 +47,35 @@ namespace ss
     this->write(i, line);
   }
 
-  auto State::insert_constant(Value v) noexcept -> std::size_t
+  auto BytecodeChunk::insert_constant(Value v) noexcept -> std::size_t
   {
     this->constants.push_back(v);
     return this->constants.size() - 1;
   }
 
-  auto State::constant_at(std::size_t offset) const noexcept -> Value
+  auto BytecodeChunk::constant_at(std::size_t offset) const noexcept -> Value
   {
     return this->constants[offset];
   }
 
-  void State::push_stack(Value v) noexcept
+  void BytecodeChunk::push_stack(Value v) noexcept
   {
     this->stack.push_back(v);
   }
 
-  auto State::pop_stack() noexcept -> Value
+  auto BytecodeChunk::pop_stack() noexcept -> Value
   {
     Value v = this->stack.back();
     this->stack.pop_back();
     return v;
   }
 
-  auto State::stack_empty() const noexcept -> bool
+  auto BytecodeChunk::stack_empty() const noexcept -> bool
   {
     return this->stack.empty();
   }
 
-  void State::add_line(std::size_t line) noexcept
+  void BytecodeChunk::add_line(std::size_t line) noexcept
   {
     if (this->last_line == line) {
       // same line number
@@ -87,7 +87,7 @@ namespace ss
     }
   }
 
-  void State::print_stack(VMConfig& cfg) const noexcept
+  void BytecodeChunk::print_stack(VMConfig& cfg) const noexcept
   {
     cfg.write("        | ");
     for (const auto& value : this->stack) {
@@ -96,7 +96,7 @@ namespace ss
     cfg.write_line();
   }
 
-  auto State::line_at(std::size_t offset) const noexcept -> std::size_t
+  auto BytecodeChunk::line_at(std::size_t offset) const noexcept -> std::size_t
   {
     std::size_t accum = 0;
     std::size_t line  = 0;
@@ -111,40 +111,29 @@ namespace ss
     return line;
   }
 
-  auto State::peek_stack(std::size_t index) const noexcept -> Value
+  auto BytecodeChunk::peek_stack(std::size_t index) const noexcept -> Value
   {
     return this->stack[this->stack_size() - 1 - index];
   }
 
-  auto State::stack_size() const noexcept -> std::size_t
+  auto BytecodeChunk::stack_size() const noexcept -> std::size_t
   {
     return this->stack.size();
   }
 
-  auto State::instruction_count() const noexcept -> std::size_t
+  auto BytecodeChunk::instruction_count() const noexcept -> std::size_t
   {
     return this->code.size();
   }
 
-  auto State::begin() noexcept -> CodeIterator
+  auto BytecodeChunk::begin() noexcept -> CodeIterator
   {
     return this->code.begin();
   }
 
-  auto State::end() noexcept -> CodeIterator
+  auto BytecodeChunk::end() noexcept -> CodeIterator
   {
     return this->code.end();
-  }
-
-  void compile(std::string& src, State& state)
-  {
-    Scanner scanner(src);
-
-    auto tokens = scanner.scan();
-
-    Parser parser(std::move(tokens), state);
-
-    parser.parse();
   }
 
   Scanner::Scanner(std::string& src) noexcept: source(src), current(source.begin()), line(1), column(1) {}
@@ -458,7 +447,7 @@ namespace ss
     return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || c == '@';
   }
 
-  Parser::Parser(TokenList&& t, State& c) noexcept: tokens(std::move(t)), state(c) {}
+  Parser::Parser(TokenList&& t, BytecodeChunk& c) noexcept: tokens(std::move(t)), chunk(c) {}
 
   void Parser::parse()
   {
@@ -496,7 +485,7 @@ namespace ss
 
   void Parser::emit_instruction(Instruction i)
   {
-    this->state.write(i, this->previous()->line);
+    this->chunk.write(i, this->previous()->line);
   }
 
   auto Parser::rule_for(Token::Type t) const noexcept -> const ParseRule&
@@ -586,13 +575,13 @@ namespace ss
       this->error(this->previous(), "unparsable number");
     }
 
-    this->state.write_constant(v, this->previous()->line);
+    this->chunk.write_constant(v, this->previous()->line);
   }
 
   void Parser::make_string(bool)
   {
     Value v(std::string(this->previous()->lexeme));
-    this->state.write_constant(v, this->previous()->line);
+    this->chunk.write_constant(v, this->previous()->line);
   }
 
   void Parser::make_variable(bool can_assign)
@@ -627,7 +616,7 @@ namespace ss
   {
     auto entry = this->identifier_cache.find(name->lexeme);
     if (entry == this->identifier_cache.end()) {
-      auto indx = this->state.insert_constant(Value(std::string(name->lexeme)));
+      auto indx = this->chunk.insert_constant(Value(std::string(name->lexeme)));
       this->identifier_cache.emplace(name->lexeme, indx);
       return indx;
     } else {
@@ -786,5 +775,18 @@ namespace ss
     this->consume(Token::Type::SEMICOLON, "expect ';' after variable declaration");
 
     this->define_variable(global);
+  }
+
+  Compiler::Compiler(): scope_depth(0) {}
+
+  void Compiler::compile(std::string& src, BytecodeChunk& chunk)
+  {
+    Scanner scanner(src);
+
+    auto tokens = scanner.scan();
+
+    Parser parser(std::move(tokens), chunk);
+
+    parser.parse();
   }
 }  // namespace ss

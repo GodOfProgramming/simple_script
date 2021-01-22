@@ -4,56 +4,56 @@
 
 using ss::Instruction;
 using ss::OpCode;
-using ss::State;
+using ss::BytecodeChunk;
 using ss::Value;
 
 class TestState: public testing::Test
 {
  protected:
-  State state;
+  BytecodeChunk chunk;
 };
 
 TEST_F(TestState, METHOD(write, writing_adds_the_correct_line))
 {
-  this->state.write(Instruction{OpCode::RETURN}, 1);
-  this->state.write(Instruction{OpCode::RETURN}, 1);
-  this->state.write(Instruction{OpCode::RETURN}, 2);
+  this->chunk.write(Instruction{OpCode::RETURN}, 1);
+  this->chunk.write(Instruction{OpCode::RETURN}, 1);
+  this->chunk.write(Instruction{OpCode::RETURN}, 2);
 
-  EXPECT_EQ(this->state.line_at(0), 1);
-  EXPECT_EQ(this->state.line_at(1), 1);
-  EXPECT_EQ(this->state.line_at(2), 2);
+  EXPECT_EQ(this->chunk.line_at(0), 1);
+  EXPECT_EQ(this->chunk.line_at(1), 1);
+  EXPECT_EQ(this->chunk.line_at(2), 2);
 }
 
 TEST_F(TestState, METHOD(write_constant, can_write_constant))
 {
-  this->state.write_constant(Value(), 1);
-  this->state.write_constant(Value(1.0), 1);
-  this->state.write_constant(Value("str"), 2);
+  this->chunk.write_constant(Value(), 1);
+  this->chunk.write_constant(Value(1.0), 1);
+  this->chunk.write_constant(Value("str"), 2);
 
-  EXPECT_EQ(this->state.line_at(0), 1);
-  EXPECT_EQ(this->state.line_at(1), 1);
-  EXPECT_EQ(this->state.line_at(2), 2);
+  EXPECT_EQ(this->chunk.line_at(0), 1);
+  EXPECT_EQ(this->chunk.line_at(1), 1);
+  EXPECT_EQ(this->chunk.line_at(2), 2);
 
-  EXPECT_EQ(this->state.constant_at(0), Value());
-  EXPECT_EQ(this->state.constant_at(1), Value(1.0));
-  EXPECT_EQ(this->state.constant_at(2), Value("str"));
+  EXPECT_EQ(this->chunk.constant_at(0), Value());
+  EXPECT_EQ(this->chunk.constant_at(1), Value(1.0));
+  EXPECT_EQ(this->chunk.constant_at(2), Value("str"));
 }
 
 TEST_F(TestState, METHOD(push_stack__pop_stack, can_push_onto_stack_and_pop))
 {
-  EXPECT_TRUE(this->state.stack_empty());
+  EXPECT_TRUE(this->chunk.stack_empty());
 
-  this->state.push_stack(Value());
-  this->state.push_stack(Value(1.0));
-  this->state.push_stack(Value("str"));
+  this->chunk.push_stack(Value());
+  this->chunk.push_stack(Value(1.0));
+  this->chunk.push_stack(Value("str"));
 
-  EXPECT_FALSE(this->state.stack_empty());
+  EXPECT_FALSE(this->chunk.stack_empty());
 
-  EXPECT_EQ(this->state.pop_stack(), Value("str"));
-  EXPECT_EQ(this->state.pop_stack(), Value(1.0));
-  EXPECT_EQ(this->state.pop_stack(), Value());
+  EXPECT_EQ(this->chunk.pop_stack(), Value("str"));
+  EXPECT_EQ(this->chunk.pop_stack(), Value(1.0));
+  EXPECT_EQ(this->chunk.pop_stack(), Value());
 
-  EXPECT_TRUE(this->state.stack_empty());
+  EXPECT_TRUE(this->chunk.stack_empty());
 }
 
 using ss::OpCode;
@@ -167,9 +167,9 @@ TEST(Parser, METHOD(parse, some_math))
 
   auto tokens = scanner.scan();
 
-  State state;
+  BytecodeChunk chunk;
 
-  Parser parser(std::move(tokens), state);
+  Parser parser(std::move(tokens), chunk);
 
   EXPECT_NO_THROW(parser.parse());
 
@@ -188,5 +188,5 @@ TEST(Parser, METHOD(parse, some_math))
    Instruction{OpCode::POP},
   };
 
-  ASSERT_EQ(expected.size(), state.instruction_count());
+  ASSERT_EQ(expected.size(), chunk.instruction_count());
 }

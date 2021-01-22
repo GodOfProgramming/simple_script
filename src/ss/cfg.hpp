@@ -20,7 +20,7 @@ namespace ss
   template <typename T>
   concept LineReadable = requires(T& t)
   {
-    std::getline(std::cin, t);
+    std::getline(std::cin, t, '\n');
   };
 
   class VMConfig
@@ -54,10 +54,10 @@ namespace ss
     }
 
     template <LineReadable T>
-    void read_line(T& t)
+    void read_line(T& t, char delim = '\n')
     {
       if (this->istream != nullptr) {
-        std::getline(*this->istream, t);
+        std::getline(*this->istream, t, delim);
       }
     }
 

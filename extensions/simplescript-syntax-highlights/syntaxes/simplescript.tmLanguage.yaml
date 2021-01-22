@@ -23,7 +23,7 @@ repository:
         match: "\\b(true|false)\\b"
   callables:
     patterns:
-      - match: "([@A-Za-z_]\\w*\\(.*\\))|(\\|.*\\|)"
+      - match: "([@A-Za-z_]\\w*\\((.*\\n?)*\\))|(\\|.*\\|)"
         name: "support.function.simplescript"
   strings:
     name: "string.quoted.double.simplescript"

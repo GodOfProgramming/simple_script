@@ -208,7 +208,7 @@ namespace ss
   auto operator<<(std::ostream& ostream, const Token::Type& type) -> std::ostream&;
   auto operator<<(std::ostream& ostream, const Token& token) -> std::ostream&;
 
-  class State
+  class BytecodeChunk
   {
    public:
     using CodeSegment  = std::vector<Instruction>;
@@ -299,8 +299,6 @@ namespace ss
     void add_line(std::size_t line) noexcept;
   };
 
-  void compile(std::string& src, State& state);
-
   class Scanner
   {
    public:
@@ -363,15 +361,15 @@ namespace ss
     };
 
    public:
-    Parser(TokenList&& tokens, State& state) noexcept;
+    Parser(TokenList&& tokens, BytecodeChunk& chunk) noexcept;
     ~Parser() = default;
 
     void parse();
 
    private:
-    TokenList     tokens;
-    TokenIterator iter;
-    State&        state;
+    TokenList                                         tokens;
+    TokenIterator                                     iter;
+    BytecodeChunk&                                    chunk;
     std::unordered_map<std::string_view, std::size_t> identifier_cache;
 
     void write_instruction(Instruction i);
@@ -407,4 +405,22 @@ namespace ss
     void expression_statement();
     void let_statement();
   };
+
+  struct Local
+  {
+    Token       name;
+    std::size_t depth;
+  };
+
+  class Compiler
+  {
+   public:
+    Compiler();
+    void compile(std::string& src, BytecodeChunk& chunk);
+
+   private:
+    std::vector<Local> locals;
+    std::size_t        scope_depth;
+  };
+
 }  // namespace ss

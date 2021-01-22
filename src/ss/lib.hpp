@@ -26,17 +26,17 @@ namespace ss
 
    private:
     VMConfig            config;
-    State*              state;
-    State::CodeIterator ip;
+    BytecodeChunk*              chunk;
+    BytecodeChunk::CodeIterator ip;
     GlobalMap           globals;
 
     void run();
 
-    void interpret(State& state);
+    void interpret(BytecodeChunk& chunk);
     void run_chunk();
 
-    void disassemble_chunk(std::string name, State& state) noexcept;
-    void disassemble_instruction(State& state, Instruction i, std::size_t offset) noexcept;
+    void disassemble_chunk(std::string name, BytecodeChunk& chunk) noexcept;
+    void disassemble_instruction(BytecodeChunk& chunk, Instruction i, std::size_t offset) noexcept;
 
     void print_stack() noexcept;
   };

@@ -2,6 +2,8 @@
 #include "ss/lib.hpp"
 #include <gtest/gtest.h>
 
+#define TEST_SCRIPT(src) #src
+
 using ss::Value;
 using ss::VM;
 using ss::VMConfig;
@@ -22,11 +24,9 @@ class TestVM: public testing::Test
 
 TEST_F(TestVM, prints_correctly)
 {
-#define TEST_SCRIPT(src) #src
   const char* script = {
 #include "scripts/print_script.ss"
   };
-#undef TEST_SCRIPT
 
   this->vm->run_script(script);
 
@@ -35,10 +35,9 @@ TEST_F(TestVM, prints_correctly)
 
 TEST_F(TestVM, setting_and_getting_vars)
 {
-  auto script = R"(
-    print value;
-    value = true;
-  )";
+  const char* script = {
+#include "scripts/var_script.ss"
+  };
 
   this->vm->set_var("value", Value("test"));
   this->vm->run_script(script);

@@ -5,67 +5,69 @@
 
 using ss::VMConfig;
 
-TEST(VMConfig, METHOD(write, writes_to_output))
+class TestVMConfig: public testing::Test
 {
-  std::ostringstream oss;
-  VMConfig           cfg(&std::cin, &oss);
+ public:
+  void SetUp() override
+  {
+    this->oss    = std::make_shared<std::ostringstream>();
+    this->iss    = std::make_shared<std::istringstream>();
+    this->config = std::make_shared<VMConfig>(this->iss.get(), this->oss.get());
+  }
 
-  cfg.write("hello world");
-  EXPECT_EQ(oss.str(), "hello world");
-  oss.str(std::string());
-  cfg.write_line("hello world");
-  EXPECT_EQ(oss.str(), "hello world\n");
+ protected:
+  std::shared_ptr<std::ostringstream> oss;
+  std::shared_ptr<std::istringstream> iss;
+  std::shared_ptr<VMConfig>           config;
+};
+
+TEST_F(TestVMConfig, METHOD(write, writes_to_output))
+{
+  this->config->write("hello world");
+  EXPECT_EQ(this->oss->str(), "hello world");
+  this->oss->str(std::string());
+  this->config->write_line("hello world");
+  EXPECT_EQ(this->oss->str(), "hello world\n");
 }
 
-TEST(VMConfig, METHOD(read, reads_from_input))
+TEST_F(TestVMConfig, METHOD(read, reads_from_input))
 {
-  std::istringstream iss;
-  VMConfig           cfg(&iss);
-
-  iss.str("123 example");
+  this->iss->str("123 example");
 
   int         n;
   std::string word;
 
-  cfg.read(n);
-  cfg.read(word);
+  this->config->read(n);
+  this->config->read(word);
 
   EXPECT_EQ(n, 123);
   EXPECT_EQ(word, "example");
 }
 
-TEST(VMConfig, METHOD(read_line, can_read_a_whole_line))
+TEST_F(TestVMConfig, METHOD(read_line, can_read_a_whole_line))
 {
-  GTEST_SKIP();
-
-  std::istringstream iss;
-  VMConfig           cfg(&iss);
-
-  iss.str(std::string("a multiword sentence"));
+  this->iss->str(std::string("a multiword sentence"));
 
   std::string line;
 
-  cfg.read_line(line);
+  this->config->read_line(line);
 
   EXPECT_EQ(line, "a multiword sentence");
 }
 
-TEST(VMConfig, METHOD(reset_ostream, can_set_ostream_back_to_inital_state))
+TEST_F(TestVMConfig, METHOD(reset_ostream, can_set_ostream_back_to_inital_state))
 {
-  std::ostringstream oss;
-  VMConfig           cfg(&std::cin, &oss);
+  this->config->write(std::setprecision(3), 1.234567);
 
-  cfg.write(std::setprecision(3), 1.234567);
+  EXPECT_EQ(this->oss->str(), "1.23");
 
-  EXPECT_EQ(oss.str(), "1.23");
+  this->config->write(" ", 7.654321);
 
-  cfg.write(" ", 7.654321);
+  EXPECT_EQ(this->oss->str(), "1.23 7.65");
 
-  EXPECT_EQ(oss.str(), "1.23 7.65");
+  this->config->reset_ostream();
 
-  cfg.reset_ostream();
+  this->config->write(" ", 5.4321);
 
-  cfg.write(" ", 5.4321);
-
-  EXPECT_EQ(oss.str(), "1.23 7.65 5.4321");
+  EXPECT_EQ(this->oss->str(), "1.23 7.65 5.4321");
 }
