@@ -1,4 +1,4 @@
 TEST_SCRIPT(
-    print value;
-    value = true;
+  print value;
+  value = true;
 )

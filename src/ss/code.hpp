@@ -128,6 +128,10 @@ namespace ss
      */
     PRINT,
     /**
+     * @brief Jumps to a code location indicated by the modifying bits
+     */
+    JUMP_IF_FALSE,
+    /**
      * @brief TODO
      */
     RETURN,
@@ -169,6 +173,7 @@ namespace ss
       SS_ENUM_TO_STR_CASE(OpCode, NOT)
       SS_ENUM_TO_STR_CASE(OpCode, NEGATE)
       SS_ENUM_TO_STR_CASE(OpCode, PRINT)
+      SS_ENUM_TO_STR_CASE(OpCode, JUMP_IF_FALSE)
       SS_ENUM_TO_STR_CASE(OpCode, RETURN)
       default: {
         return "UNKNOWN";
@@ -393,6 +398,8 @@ namespace ss
 
     auto instruction_count() const noexcept -> std::size_t;
 
+    auto index_code_mut(std::size_t index) -> Instruction&;
+
     auto find_ident(std::string_view name) const noexcept -> IdentifierCacheEntry;
     auto is_entry_found(IdentifierCacheEntry entry) const noexcept -> bool;
 
@@ -537,6 +544,8 @@ namespace ss
     void consume(Token::Type type, std::string err);
     void error(TokenIterator tok, std::string msg) const;
     void emit_instruction(Instruction i);
+    auto emit_jump(Instruction i) -> std::size_t;
+    void patch_jump(std::size_t jump_loc);
     void begin_scope();
     void end_scope();
 
@@ -573,6 +582,7 @@ namespace ss
     void expression_statement();
     void let_statement();
     void block_statement();
+    void if_statement();
   };
 
   class Compiler

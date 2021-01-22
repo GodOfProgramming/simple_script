@@ -208,6 +208,11 @@ namespace ss
         case OpCode::PRINT: {
           config.write_line(chunk->pop_stack());
         } break;
+        case OpCode::JUMP_IF_FALSE: {
+          if (!this->chunk->peek_stack().truthy()) {
+            this->ip += this->ip->modifying_bits;
+          }
+        } break;
         case OpCode::RETURN: {
           return;
         } break;
@@ -335,6 +340,7 @@ namespace ss
       SS_SIMPLE_PRINT_CASE(NOT)
       SS_SIMPLE_PRINT_CASE(NEGATE)
       SS_SIMPLE_PRINT_CASE(PRINT)
+      SS_SIMPLE_PRINT_CASE(JUMP_IF_FALSE)
       SS_SIMPLE_PRINT_CASE(RETURN)
       default: {
         this->config.write_line(i.major_opcode, ": ", i.modifying_bits);

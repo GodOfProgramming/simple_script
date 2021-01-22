@@ -46,3 +46,25 @@ TEST_F(TestVM, setting_and_getting_vars)
   EXPECT_EQ(this->ostream->str(), "test\n");
   EXPECT_EQ(this->vm->get_var("value"), Value(true));
 }
+
+TEST_F(TestVM, blocks)
+{
+  const char* script = {
+#include "scripts/block_script.ss"
+  };
+
+  this->vm->run_script(script);
+
+  EXPECT_EQ(this->ostream->str(), "string\n");
+}
+
+TEST_F(TestVM, if_statements)
+{
+  const char* script = {
+#include "scripts/if_script.ss"
+  };
+
+  this->vm->run_script(script);
+
+  EXPECT_EQ(this->ostream->str(), "true\nafter\n");
+}

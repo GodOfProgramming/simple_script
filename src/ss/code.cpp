@@ -132,6 +132,11 @@ namespace ss
     return this->code.size();
   }
 
+  auto BytecodeChunk::index_code_mut(std::size_t index) -> Instruction&
+  {
+    return this->code[index];
+  }
+
   auto BytecodeChunk::begin() noexcept -> CodeIterator
   {
     return this->code.begin();
@@ -550,6 +555,20 @@ namespace ss
     this->chunk.write(i, this->previous()->line);
   }
 
+  auto Parser::emit_jump(Instruction i) -> std::size_t
+  {
+    std::size_t location = this->chunk.instruction_count();
+    this->emit_instruction(i);
+    return location;
+  }
+
+  void Parser::patch_jump(std::size_t jump_loc)
+  {
+    std::size_t offset = this->chunk.instruction_count() - jump_loc;
+
+    this->chunk.index_code_mut(jump_loc).modifying_bits = offset;
+  }
+
   void Parser::begin_scope()
   {
     this->scope_depth++;
@@ -886,6 +905,8 @@ namespace ss
   {
     if (this->advance_if_matches(Token::Type::PRINT)) {
       this->print_statement();
+    } else if (this->advance_if_matches(Token::Type::IF)) {
+      this->if_statement();
     } else if (this->advance_if_matches(Token::Type::LEFT_BRACE)) {
       this->begin_scope();
       this->block_statement();
@@ -939,6 +960,16 @@ namespace ss
     }
 
     this->consume(Token::Type::RIGHT_BRACE, "expect '}' after block");
+  }
+
+  void Parser::if_statement()
+  {
+    this->expression();
+    this->consume(Token::Type::LEFT_BRACE, "expect '{' after condition");
+
+    std::size_t jump_offset = this->emit_jump(Instruction{OpCode::JUMP_IF_FALSE});
+    this->block_statement();
+    this->patch_jump(jump_offset);
   }
 
   void Compiler::compile(std::string& src, BytecodeChunk& chunk)
