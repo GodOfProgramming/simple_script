@@ -2,13 +2,12 @@
 
 #include "datatypes.hpp"
 #include "exceptions.hpp"
+#include "util.hpp"
 
-#include <boost/convert.hpp>
-#include <boost/convert/strtol.hpp>
-#include <charconv>
 #include <cstring>
 #include <iostream>
 #include <sstream>
+#include <filesystem>
 
 namespace ss
 {
@@ -31,6 +30,18 @@ namespace ss
   {
     return ostream << "{ type: " << token.type << ", lexeme: \"" << token.lexeme << "\", line: " << token.line
                    << ", column: " << token.column << " }";
+  }
+
+  void BytecodeChunk::prepare() noexcept
+  {
+    this->code.clear();
+    this->constants.clear();
+    this->stack.clear();
+    this->lines.clear();
+    this->last_line            = 0;
+    this->instructions_on_line = 0;
+    this->local_cache.clear();
+    this->identifier_cache.clear();
   }
 
   void BytecodeChunk::write(Instruction i, std::size_t line) noexcept
@@ -214,14 +225,15 @@ namespace ss
     for (const auto& pair : this->local_cache) { cfg.write_line(pair.first, "=", pair.second); }
   }
 
-  Scanner::Scanner(std::string&& src) noexcept: source(std::move(src)), current(source.begin()), line(1), column(1) {}
+  Scanner::Scanner(std::string&& src) noexcept: source(std::move(src)), current_char(this->source.begin()), line(1), column(1)
+  {}
 
   auto Scanner::scan() -> std::vector<Token>
   {
     std::vector<Token> tokens;
 
     for (this->skip_whitespace(); !this->is_at_end(); this->skip_whitespace()) {
-      char c = *this->start;
+      char c = *this->starting_char;
 
       Token::Type t;
 
@@ -285,7 +297,7 @@ namespace ss
             t = Token::Type::IDENTIFIER;
           } else {
             std::stringstream ss;
-            ss << "invalid character '" << *this->start << '\'';
+            ss << "invalid character '" << *this->starting_char << '\'';
             this->error(ss.str());
           }
         }
@@ -329,9 +341,9 @@ namespace ss
   {
     Token token;
     token.type   = t;
-    token.lexeme = std::string_view(this->start.base(), this->current - this->start);
+    token.lexeme = std::string_view(this->starting_char.base(), this->current_char - this->starting_char);
     token.line   = this->line;
-    token.column = this->column - (this->current - this->start);
+    token.column = this->column - (this->current_char - this->starting_char);
 
     return token;
   }
@@ -350,7 +362,7 @@ namespace ss
     }
 
     // advance past the leading '"'
-    this->start++;
+    this->starting_char++;
 
     Token str = this->make_token(Token::Type::STRING);
 
@@ -383,7 +395,7 @@ namespace ss
 
   auto Scanner::identifier() -> Token::Type
   {
-    switch (*this->start) {
+    switch (*this->starting_char) {
       case 'a': {
         return this->check_keyword(1, 2, "nd", Token::Type::AND);
       }
@@ -391,7 +403,7 @@ namespace ss
         return this->check_keyword(1, 4, "reak", Token::Type::BREAK);
       }
       case 'c': {
-        switch (*(this->start + 1)) {
+        switch (*(this->starting_char + 1)) {
           case 'l': {
             return this->check_keyword(2, 3, "ass", Token::Type::CLASS);
           }
@@ -406,7 +418,7 @@ namespace ss
         return this->check_keyword(1, 3, "lse", Token::Type::ELSE);
       }
       case 'f': {
-        switch (*(this->start + 1)) {
+        switch (*(this->starting_char + 1)) {
           case 'a': {
             return this->check_keyword(2, 3, "lse", Token::Type::FALSE);
           }
@@ -423,39 +435,52 @@ namespace ss
       case 'i': {
         return this->check_keyword(1, 1, "f", Token::Type::IF);
       }
-      case 'l': {
-        switch (*(this->start + 1)) {
-          case 'e': {
+      case 'l':
+        switch (*(this->starting_char + 1)) {
+          case 'e':
             return this->check_keyword(2, 1, "t", Token::Type::LET);
-          }
-          case 'o': {
-            return this->check_keyword(2, 2, "op", Token::Type::LOOP);
-          }
+          case 'o':
+            switch (*(this->starting_char + 2)) {
+              case 'a':
+                switch (*(this->starting_char + 3)) {
+                  case 'd': {
+                    auto type = this->check_keyword(4, 0, "", Token::Type::LOAD);
+                    if (type == Token::Type::LOAD) {
+                      return type;
+                    } else {
+                      switch (*(this->starting_char + 4)) {
+                        case 'r':
+                          return this->check_keyword(5, 0, "", Token::Type::LOADR);
+                        default:
+                          return Token::Type::IDENTIFIER;
+                      }
+                    }
+                  }
+                  default:
+                    return Token::Type::IDENTIFIER;
+                }
+              case 'o':
+                return this->check_keyword(3, 1, "p", Token::Type::LOOP);
+              default:
+                return Token::Type::IDENTIFIER;
+            }
           default:
             return Token::Type::IDENTIFIER;
         }
-      }
-      case 'm': {
+      case 'm':
         return this->check_keyword(1, 4, "atch", Token::Type::MATCH);
-      }
-      case 'n': {
+      case 'n':
         return this->check_keyword(1, 2, "il", Token::Type::NIL);
-      }
-      case 'o': {
+      case 'o':
         return this->check_keyword(1, 1, "r", Token::Type::OR);
-      }
-      case 'p': {
+      case 'p':
         return this->check_keyword(1, 4, "rint", Token::Type::PRINT);
-      }
-      case 'r': {
+      case 'r':
         return this->check_keyword(1, 5, "eturn", Token::Type::RETURN);
-      }
-      case 't': {
+      case 't':
         return this->check_keyword(1, 3, "rue", Token::Type::TRUE);
-      }
-      case 'w': {
+      case 'w':
         return this->check_keyword(1, 4, "hile", Token::Type::WHILE);
-      }
       default:
         return Token::Type::IDENTIFIER;
     }
@@ -465,8 +490,8 @@ namespace ss
    -> Token::Type
   {
     if (
-     static_cast<std::size_t>(this->current - this->start) == start + len &&
-     std::memcmp((this->start + start).base(), rest, len) == 0) {
+     static_cast<std::size_t>(this->current_char - this->starting_char) == start + len &&
+     std::memcmp((this->starting_char + start).base(), rest, len) == 0) {
       return type;
     }
 
@@ -475,23 +500,23 @@ namespace ss
 
   auto Scanner::is_at_end() const noexcept -> bool
   {
-    return this->current >= this->source.end();
+    return this->current_char >= this->source.end();
   }
 
   auto Scanner::peek() const noexcept -> char
   {
-    return *this->current;
+    return *this->current_char;
   }
 
   auto Scanner::peek_next() const noexcept -> char
   {
-    return *(this->current + 1);
+    return *(this->current_char + 1);
   }
 
   auto Scanner::advance() noexcept -> char
   {
-    char c = *this->current;
-    this->current++;
+    char c = *this->current_char;
+    this->current_char++;
     this->column++;
     return c;
   }
@@ -530,7 +555,7 @@ namespace ss
         }
       }
     }
-    this->start = this->current;
+    this->starting_char = this->current_char;
   }
 
   auto Scanner::is_digit(char c) const noexcept -> bool
@@ -543,11 +568,12 @@ namespace ss
     return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || c == '@';
   }
 
-  Parser::Parser(TokenList&& t, BytecodeChunk& c) noexcept: tokens(std::move(t)), chunk(c), scope_depth(0), in_loop(false) {}
+  Parser::Parser(TokenList&& t, BytecodeChunk& c, std::string cf) noexcept
+   : tokens(std::move(t)), iter(this->tokens.begin()), chunk(c), current_file(cf), scope_depth(0), in_loop(false)
+  {}
 
   void Parser::parse()
   {
-    this->iter = this->tokens.begin();
     while (this->iter < tokens.end() && this->iter->type != Token::Type::END_OF_FILE) { this->declaration(); }
   }
 
@@ -668,6 +694,8 @@ namespace ss
       rules[static_cast<std::size_t>(Token::Type::FOR)]           = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::FN)]            = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::IF)]            = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::LOAD)]          = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::LOADR)]         = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::LOOP)]          = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::MATCH)]         = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::NIL)]           = {&Parser::literal_expr, nullptr, Precedence::NONE};
@@ -965,26 +993,54 @@ namespace ss
 
   void Parser::statement()
   {
-    if (this->advance_if_matches(Token::Type::PRINT)) {
-      this->print_stmt();
-    } else if (this->advance_if_matches(Token::Type::FOR)) {
-      this->for_stmt();
-    } else if (this->advance_if_matches(Token::Type::IF)) {
-      this->if_stmt();
-    } else if (this->advance_if_matches(Token::Type::WHILE)) {
-      this->while_stmt();
-    } else if (this->advance_if_matches(Token::Type::LOOP)) {
-      this->loop_stmt();
-    } else if (this->advance_if_matches(Token::Type::MATCH)) {
-      this->match_stmt();
-    } else if (this->advance_if_matches(Token::Type::BREAK)) {
-      this->break_stmt();
-    } else if (this->advance_if_matches(Token::Type::CONTINUE)) {
-      this->continue_stmt();
-    } else if (this->advance_if_matches(Token::Type::LEFT_BRACE)) {
-      this->block_stmt();
-    } else {
-      this->expression_stmt();
+    switch (this->iter->type) {
+      case Token::Type::BREAK: {
+        this->advance();
+        this->break_stmt();
+      } break;
+      case Token::Type::CONTINUE: {
+        this->advance();
+        this->continue_stmt();
+      } break;
+      case Token::Type::FOR: {
+        this->advance();
+        this->for_stmt();
+      } break;
+      case Token::Type::IF: {
+        this->advance();
+        this->if_stmt();
+      } break;
+      case Token::Type::LEFT_BRACE: {
+        this->advance();
+        this->block_stmt();
+      } break;
+      case Token::Type::LOAD: {
+        this->advance();
+        this->load_stmt();
+      } break;
+      case Token::Type::LOADR: {
+        this->advance();
+        this->loadr_stmt();
+      } break;
+      case Token::Type::LOOP: {
+        this->advance();
+        this->loop_stmt();
+      } break;
+      case Token::Type::MATCH: {
+        this->advance();
+        this->match_stmt();
+      } break;
+      case Token::Type::PRINT: {
+        this->advance();
+        this->print_stmt();
+      } break;
+      case Token::Type::WHILE: {
+        this->advance();
+        this->while_stmt();
+      } break;
+      default: {
+        this->expression_stmt();
+      } break;
     }
   }
 
@@ -1187,13 +1243,73 @@ namespace ss
     this->emit_instruction(Instruction{OpCode::LOOP, this->chunk.instruction_count() - this->continue_jmp});
   }
 
-  void Compiler::compile(std::string&& src, BytecodeChunk& chunk)
+  void Parser::load_stmt()
+  {
+    this->consume(Token::Type::STRING, "expected file to be string type");
+    auto file = this->previous()->lexeme;
+    this->consume(Token::Type::SEMICOLON, "expected ';' after load stmt");
+    auto libdirs    = std::getenv("SS_LIB");
+    bool file_found = false;
+
+    std::string dirs;
+    if (libdirs == nullptr) {
+      auto home = std::getenv("HOME");
+      if (home != nullptr) {
+        std::stringstream ss;
+        ss << home << '/' << ".simple";
+        dirs = ss.str();
+      }
+    } else {
+      dirs = libdirs;
+    }
+
+    std::istringstream iss(dirs);
+    std::string        line;
+    while (std::getline(iss, line, ':')) {
+      std::stringstream ss;
+      ss << line << '/' << file;
+      std::string path = ss.str();
+      if (std::filesystem::exists(path)) {
+        auto contents = util::load_file_to_string(path);
+
+        Compiler compiler;
+        compiler.compile(std::move(contents), this->chunk, path);
+        file_found = true;
+      }
+    }
+
+    if (!file_found) {
+      this->error(this->previous(), "unable to load file");
+    }
+  }
+
+  void Parser::loadr_stmt()
+  {
+    this->consume(Token::Type::STRING, "expected file to be string type");
+    auto file = this->previous()->lexeme;
+    this->consume(Token::Type::SEMICOLON, "expected ';' after load stmt");
+    std::filesystem::path path = this->current_file;
+    std::stringstream     ss;
+    ss << path.parent_path().string() << '/' << file;
+    path = ss.str();
+
+    if (!std::filesystem::exists(path)) {
+      this->error(this->previous(), "unable to load file");
+    }
+
+    auto contents = util::load_file_to_string(path.string());
+
+    Compiler compiler;
+    compiler.compile(std::move(contents), this->chunk, path.string());
+  }
+
+  void Compiler::compile(std::string&& src, BytecodeChunk& chunk, std::string current_file)
   {
     Scanner scanner(std::move(src));
 
     auto tokens = scanner.scan();
 
-    Parser parser(std::move(tokens), chunk);
+    Parser parser(std::move(tokens), chunk, current_file);
 
     parser.parse();
   }

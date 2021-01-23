@@ -1,11 +1,13 @@
 #include "lib.hpp"
 
 #include "exceptions.hpp"
+#include "util.hpp"
 
 #include <exception>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+#include <fstream>
 
 namespace ss
 {
@@ -50,27 +52,36 @@ namespace ss
     return exit_code;
   }
 
-  void VM::run_script(std::string src)
+  void VM::run_file(std::string filename)
   {
-    this->chunk = BytecodeChunk();
-    this->compile(std::move(src));
+    std::filesystem::path cwd = std::filesystem::current_path();
+    std::stringstream     ss;
+    ss << cwd.string() << '/' << filename;
+    this->run_script(util::load_file_to_string(filename), ss.str());
+  }
+
+  void VM::run_script(std::string src, std::filesystem::path path)
+  {
+    this->chunk.prepare();
+    this->compile(path.string(), std::move(src));
     this->ip = this->chunk.begin();
     this->execute();
   }
 
   void VM::run_line(std::string line)
   {
-    std::size_t offset = this->chunk.instruction_count();
-    this->compile(std::move(line));
+    std::filesystem::path cwd    = std::filesystem::current_path();
+    std::size_t           offset = this->chunk.instruction_count();
+    this->compile(cwd.string(), std::move(line));
     this->ip = this->chunk.begin() + offset;
     this->execute();
   }
 
-  void VM::compile(std::string&& src)
+  void VM::compile(std::string filename, std::string&& src)
   {
     Compiler compiler;
 
-    compiler.compile(std::move(src), this->chunk);
+    compiler.compile(std::move(src), this->chunk, filename);
   }
 
   void VM::execute()

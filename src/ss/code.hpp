@@ -259,6 +259,8 @@ namespace ss
       FN,
       IF,
       LET,
+      LOAD,
+      LOADR,
       LOOP,
       MATCH,
       NIL,
@@ -308,13 +310,18 @@ namespace ss
       SS_ENUM_TO_STR_CASE(Token::Type, STRING)
       SS_ENUM_TO_STR_CASE(Token::Type, NUMBER)
       SS_ENUM_TO_STR_CASE(Token::Type, AND)
+      SS_ENUM_TO_STR_CASE(Token::Type, BREAK)
       SS_ENUM_TO_STR_CASE(Token::Type, CLASS)
+      SS_ENUM_TO_STR_CASE(Token::Type, CONTINUE)
       SS_ENUM_TO_STR_CASE(Token::Type, ELSE)
       SS_ENUM_TO_STR_CASE(Token::Type, FALSE)
       SS_ENUM_TO_STR_CASE(Token::Type, FOR)
       SS_ENUM_TO_STR_CASE(Token::Type, FN)
       SS_ENUM_TO_STR_CASE(Token::Type, IF)
       SS_ENUM_TO_STR_CASE(Token::Type, LET)
+      SS_ENUM_TO_STR_CASE(Token::Type, LOAD)
+      SS_ENUM_TO_STR_CASE(Token::Type, LOADR)
+      SS_ENUM_TO_STR_CASE(Token::Type, LOOP)
       SS_ENUM_TO_STR_CASE(Token::Type, NIL)
       SS_ENUM_TO_STR_CASE(Token::Type, OR)
       SS_ENUM_TO_STR_CASE(Token::Type, PRINT)
@@ -322,8 +329,6 @@ namespace ss
       SS_ENUM_TO_STR_CASE(Token::Type, TRUE)
       SS_ENUM_TO_STR_CASE(Token::Type, WHILE)
       SS_ENUM_TO_STR_CASE(Token::Type, MATCH)
-      SS_ENUM_TO_STR_CASE(Token::Type, BREAK)
-      SS_ENUM_TO_STR_CASE(Token::Type, CONTINUE)
       SS_ENUM_TO_STR_CASE(Token::Type, ERROR)
       SS_ENUM_TO_STR_CASE(Token::Type, END_OF_FILE)
       SS_ENUM_TO_STR_CASE(Token::Type, LAST)
@@ -346,6 +351,11 @@ namespace ss
     using LocalCache           = std::unordered_map<std::size_t, std::string>;
     using IdentifierCache      = std::unordered_map<std::string_view, std::size_t>;
     using IdentifierCacheEntry = IdentifierCache::const_iterator;
+
+    /**
+     * @brief Prepares the chunk for a new script, however globals remain intact
+     */
+    void prepare() noexcept;
 
     /**
      * @brief Writes the instruction and tags it with the line
@@ -491,8 +501,8 @@ namespace ss
 
    private:
     std::string&&         source;
-    std::string::iterator start;
-    std::string::iterator current;
+    std::string::iterator starting_char;
+    std::string::iterator current_char;
     std::size_t           line;
     std::size_t           column;
 
@@ -581,7 +591,7 @@ namespace ss
     };
 
    public:
-    Parser(TokenList&& tokens, BytecodeChunk& chunk) noexcept;
+    Parser(TokenList&& tokens, BytecodeChunk& chunk, std::string current_file) noexcept;
     ~Parser() = default;
 
     void parse();
@@ -590,6 +600,7 @@ namespace ss
     TokenList          tokens;
     TokenIterator      iter;
     BytecodeChunk&     chunk;
+    std::string        current_file;
     std::vector<Local> locals;
 
     /**
@@ -677,13 +688,15 @@ namespace ss
     void break_stmt();
     void continue_stmt();
     void match_stmt();
+    void load_stmt();
+    void loadr_stmt();
   };
 
   class Compiler
   {
    public:
     Compiler() = default;
-    void compile(std::string&& src, BytecodeChunk& chunk);
+    void compile(std::string&& src, BytecodeChunk& chunk, std::string current_file);
   };
 
 }  // namespace ss

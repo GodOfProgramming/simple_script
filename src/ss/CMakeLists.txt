@@ -4,6 +4,7 @@ set(SHARED_SOURCES
   code.cpp
   datatypes.cpp
   exceptions.cpp
+  util.cpp
 )
 
 target_sources(${EXE} PUBLIC ${SHARED_SOURCES})

@@ -180,7 +180,7 @@ TEST(Parser, METHOD(parse, some_math))
 
   BytecodeChunk chunk;
 
-  Parser parser(std::move(tokens), chunk);
+  Parser parser(std::move(tokens), chunk, "TEST");
 
   EXPECT_NO_THROW(parser.parse());
 
