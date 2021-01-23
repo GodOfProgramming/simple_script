@@ -136,9 +136,13 @@ namespace ss
      */
     JUMP_IF_FALSE,
     /**
-     * @brief Pops two values off the stack and logically or's them
+     * @brief Peeks at the stack, if the top value is true short circuts to the instruction pointed to by the modifying bit
      */
     OR,
+    /**
+     * @brief Peeks at the stack, if the top value is false short circuts to the instruction pointed to by the modifying bit
+     */
+    AND,
     /**
      * @brief TODO
      */
@@ -184,6 +188,7 @@ namespace ss
       SS_ENUM_TO_STR_CASE(OpCode, JUMP)
       SS_ENUM_TO_STR_CASE(OpCode, JUMP_IF_FALSE)
       SS_ENUM_TO_STR_CASE(OpCode, OR)
+      SS_ENUM_TO_STR_CASE(OpCode, AND)
       SS_ENUM_TO_STR_CASE(OpCode, RETURN)
       default: {
         return "UNKNOWN";

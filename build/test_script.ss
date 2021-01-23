@@ -1,10 +1,10 @@
-let x = false;
+let x = true;
 
-let y = true;
+let y = false;
 
-let z = false;
+let z = true;
 
-if x or y or z {
+if x and y and z {
   print "or";
 } else {
   print "not or";

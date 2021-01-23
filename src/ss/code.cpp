@@ -903,8 +903,7 @@ namespace ss
 
   void Parser::and_expr(bool)
   {
-    std::size_t end_jmp = this->emit_jump(Instruction{OpCode::JUMP_IF_FALSE});
-    this->emit_instruction(Instruction{OpCode::POP});
+    std::size_t end_jmp = this->emit_jump(Instruction{OpCode::AND});
     this->parse_precedence(Precedence::AND);
     this->patch_jump(end_jmp);
   }

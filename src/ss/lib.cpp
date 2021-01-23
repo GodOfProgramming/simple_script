@@ -227,6 +227,15 @@ namespace ss
             this->chunk->pop_stack();
           }
         } break;
+        case OpCode::AND: {
+          Value v = this->chunk->peek_stack();
+          if (!v.truthy()) {
+            this->ip += this->ip->modifying_bits;
+            continue;
+          } else {
+            this->chunk->pop_stack();
+          }
+        } break;
         case OpCode::RETURN: {
           return;
         } break;
@@ -283,7 +292,7 @@ namespace ss
       SS_SIMPLE_PRINT_CASE(NO_OP)
       SS_COMPLEX_PRINT_CASE(CONSTANT, {
         Value constant = chunk.constant_at(i.modifying_bits);
-        this->config.write(std::setw(16), std::left, OpCode::CONSTANT);
+        this->config.write(std::setw(16), std::left, i.major_opcode);
         this->config.reset_ostream();
         this->config.write(' ', std::setw(4), i.modifying_bits);
         this->config.reset_ostream();
@@ -297,7 +306,7 @@ namespace ss
       SS_SIMPLE_PRINT_CASE(POP_N)
       SS_COMPLEX_PRINT_CASE(LOOKUP_LOCAL, {
         auto name = chunk.lookup_local(i.modifying_bits);
-        this->config.write(std::setw(16), std::left, OpCode::LOOKUP_LOCAL);
+        this->config.write(std::setw(16), std::left, i.major_opcode);
         this->config.reset_ostream();
         this->config.write(' ', std::setw(4), i.modifying_bits);
         this->config.reset_ostream();
@@ -306,7 +315,7 @@ namespace ss
       })
       SS_COMPLEX_PRINT_CASE(ASSIGN_LOCAL, {
         auto name = chunk.lookup_local(i.modifying_bits);
-        this->config.write(std::setw(16), std::left, OpCode::ASSIGN_LOCAL);
+        this->config.write(std::setw(16), std::left, i.major_opcode);
         this->config.reset_ostream();
         this->config.write(' ', std::setw(4), i.modifying_bits);
         this->config.reset_ostream();
@@ -315,7 +324,7 @@ namespace ss
       })
       SS_COMPLEX_PRINT_CASE(LOOKUP_GLOBAL, {
         Value constant = chunk.constant_at(i.modifying_bits);
-        this->config.write(std::setw(16), std::left, OpCode::LOOKUP_GLOBAL);
+        this->config.write(std::setw(16), std::left, i.major_opcode);
         this->config.reset_ostream();
         this->config.write(' ', std::setw(4), i.modifying_bits);
         this->config.reset_ostream();
@@ -324,7 +333,7 @@ namespace ss
       })
       SS_COMPLEX_PRINT_CASE(DEFINE_GLOBAL, {
         Value constant = chunk.constant_at(i.modifying_bits);
-        this->config.write(std::setw(16), std::left, OpCode::DEFINE_GLOBAL);
+        this->config.write(std::setw(16), std::left, i.major_opcode);
         this->config.reset_ostream();
         this->config.write(' ', std::setw(4), i.modifying_bits);
         this->config.reset_ostream();
@@ -333,7 +342,7 @@ namespace ss
       })
       SS_COMPLEX_PRINT_CASE(ASSIGN_GLOBAL, {
         Value constant = chunk.constant_at(i.modifying_bits);
-        this->config.write(std::setw(16), std::left, OpCode::ASSIGN_GLOBAL);
+        this->config.write(std::setw(16), std::left, i.major_opcode);
         this->config.reset_ostream();
         this->config.write(' ', std::setw(4), i.modifying_bits);
         this->config.reset_ostream();
@@ -355,19 +364,25 @@ namespace ss
       SS_SIMPLE_PRINT_CASE(NEGATE)
       SS_SIMPLE_PRINT_CASE(PRINT)
       SS_COMPLEX_PRINT_CASE(JUMP, {
-        this->config.write(std::setw(16), std::left, OpCode::JUMP);
+        this->config.write(std::setw(16), std::left, i.major_opcode);
         this->config.reset_ostream();
         this->config.write_line(' ', std::setw(4), i.modifying_bits);
         this->config.reset_ostream();
       })
       SS_COMPLEX_PRINT_CASE(JUMP_IF_FALSE, {
-        this->config.write(std::setw(16), std::left, OpCode::JUMP_IF_FALSE);
+        this->config.write(std::setw(16), std::left, i.major_opcode);
         this->config.reset_ostream();
         this->config.write_line(' ', std::setw(4), i.modifying_bits);
         this->config.reset_ostream();
       })
       SS_COMPLEX_PRINT_CASE(OR, {
-        this->config.write(std::setw(16), std::left, OpCode::OR);
+        this->config.write(std::setw(16), std::left, i.major_opcode);
+        this->config.reset_ostream();
+        this->config.write_line(' ', std::setw(4), i.modifying_bits);
+        this->config.reset_ostream();
+      })
+      SS_COMPLEX_PRINT_CASE(AND, {
+        this->config.write(std::setw(16), std::left, i.major_opcode);
         this->config.reset_ostream();
         this->config.write_line(' ', std::setw(4), i.modifying_bits);
         this->config.reset_ostream();
