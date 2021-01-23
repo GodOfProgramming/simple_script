@@ -1,5 +1,7 @@
 #include "datatypes.hpp"
+
 #include "exceptions.hpp"
+
 #include <sstream>
 #include <cmath>
 
@@ -16,6 +18,8 @@ namespace ss
   Value::Value(StringType v): value(v) {}
 
   Value::Value(const char* v): Value(std::string(v)) {}
+
+  Value::Value(FunctionType v): value(v) {}
 
   auto Value::boolean() const -> BoolType
   {
@@ -35,12 +39,21 @@ namespace ss
     }
   }
 
-  auto Value::string() const -> std::string
+  auto Value::string() const -> StringType
   {
     if (this->is_type(Type::String)) {
       return std::get<StringType>(this->value);
     } else {
       return StringType();
+    }
+  }
+
+  auto Value::function() const -> FunctionType
+  {
+    if (this->is_type(Type::Function)) {
+      return std::get<FunctionType>(this->value);
+    } else {
+      return nullptr;
     }
   }
 
@@ -79,6 +92,9 @@ namespace ss
       }
       case Type::String: {
         return std::get<StringType>(this->value);
+      }
+      case Type::Function: {
+        return std::get<FunctionType>(this->value)->to_string();
       }
       default: {
         // virtually impossible to get here, unable to test
@@ -205,9 +221,7 @@ namespace ss
           case Type::String: {
             auto              b = std::get<StringType>(other.value);
             std::stringstream ss;
-            for (double i = 0; i < a; i++) {
-              ss << b;
-            }
+            for (double i = 0; i < a; i++) { ss << b; }
             return Value(ss.str());
           }
           default: {
@@ -221,9 +235,7 @@ namespace ss
           case Type::Number: {
             auto              b = std::get<NumberType>(other.value);
             std::stringstream ss;
-            for (double i = 0; i < b; i++) {
-              ss << a;
-            }
+            for (double i = 0; i < b; i++) { ss << a; }
             return Value(ss.str());
           }
           default: {
@@ -308,6 +320,12 @@ namespace ss
     return *this = StringType(v);
   }
 
+  auto Value::operator=(FunctionType v) noexcept -> Value&
+  {
+    this->value = v;
+    return *this;
+  }
+
   auto Value::operator==(const Value& other) const noexcept -> bool
   {
     return this->value == other.value;
@@ -351,5 +369,43 @@ namespace ss
   auto operator<<(std::ostream& ostream, const Value& value) -> std::ostream&
   {
     return ostream << value.to_string();
+  }
+
+  Function::Function() noexcept: airity(0) {}
+
+  auto Function::to_string() const noexcept -> std::string
+  {
+    return this->name;
+  }
+
+  auto operator<<(std::ostream& ostream, const Function& fn) -> std::ostream&
+  {
+    return ostream << fn.to_string();
+  }
+
+  auto ScriptFunction::call(std::vector<Value>&& args) -> Value
+  {
+    (void)args;
+    return Value();
+  }
+
+  auto ScriptFunction::to_string() const noexcept -> std::string
+  {
+    std::stringstream ss;
+    ss << "<fn " << this->name << '>';
+    return ss.str();
+  }
+
+  auto NativeFunction::call(std::vector<Value>&& args) -> Value
+  {
+    (void)args;
+    return Value();
+  }
+
+  auto NativeFunction::to_string() const noexcept -> std::string
+  {
+    std::stringstream ss;
+    ss << "<nf " << this->name << '>';
+    return ss.str();
   }
 }  // namespace ss

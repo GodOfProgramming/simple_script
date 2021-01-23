@@ -1,6 +1,8 @@
 #include "code.hpp"
+
 #include "datatypes.hpp"
 #include "exceptions.hpp"
+
 #include <boost/convert.hpp>
 #include <boost/convert/strtol.hpp>
 #include <charconv>
@@ -197,7 +199,7 @@ namespace ss
     for (const auto& pair : this->local_cache) { cfg.write_line(pair.first, "=", pair.second); }
   }
 
-  Scanner::Scanner(std::string& src) noexcept: source(src), current(source.begin()), line(1), column(1) {}
+  Scanner::Scanner(std::string&& src) noexcept: source(std::move(src)), current(source.begin()), line(1), column(1) {}
 
   auto Scanner::scan() -> std::vector<Token>
   {
@@ -1170,9 +1172,9 @@ namespace ss
     this->emit_instruction(Instruction{OpCode::LOOP, this->chunk.instruction_count() - this->continue_jmp});
   }
 
-  void Compiler::compile(std::string& src, BytecodeChunk& chunk)
+  void Compiler::compile(std::string&& src, BytecodeChunk& chunk)
   {
-    Scanner scanner(src);
+    Scanner scanner(std::move(src));
 
     auto tokens = scanner.scan();
 

@@ -1,5 +1,7 @@
-#include "exceptions.hpp"
 #include "lib.hpp"
+
+#include "exceptions.hpp"
+
 #include <exception>
 #include <iomanip>
 #include <iostream>
@@ -7,7 +9,7 @@
 
 namespace ss
 {
-  VM::VM(VMConfig cfg): config(cfg), chunk(nullptr) {}
+  VM::VM(VMConfig cfg): config(cfg) {}
 
   void VM::set_var(Value::StringType name, Value value) noexcept
   {
@@ -25,9 +27,9 @@ namespace ss
     bool        exit        = false;
     int         exit_code   = 0;
     std::size_t line_number = 1;
-    std::string line;
 
     while (!exit) {
+      std::string line;
       cfg.write("ss(main):", line_number, "> ");
       cfg.read_line(line);
 
@@ -36,7 +38,7 @@ namespace ss
       }
 
       try {
-        vm.run_script(line);
+        vm.run_line(line);
         line_number++;
       } catch (CompiletimeError& e) {
         cfg.write_line("compile error: ", e.what());
@@ -50,62 +52,75 @@ namespace ss
 
   void VM::run_script(std::string src)
   {
-    Compiler compiler;
-
-    BytecodeChunk chunk;
-    compiler.compile(src, chunk);
-
-    this->interpret(chunk);
+    this->chunk = BytecodeChunk();
+    this->compile(std::move(src));
+    this->ip = this->chunk.begin();
+    this->execute();
   }
 
-  void VM::run_chunk()
+  void VM::run_line(std::string line)
+  {
+    std::size_t offset = this->chunk.instruction_count();
+    this->compile(std::move(line));
+    this->ip = this->chunk.begin() + offset;
+    this->execute();
+  }
+
+  void VM::compile(std::string&& src)
+  {
+    Compiler compiler;
+
+    compiler.compile(std::move(src), this->chunk);
+  }
+
+  void VM::execute()
   {
     if constexpr (DISASSEMBLE_CHUNK) {
-      this->disassemble_chunk("TODO", *this->chunk);
+      this->disassemble_chunk();
     }
     if constexpr (PRINT_CONSTANTS) {
-      this->chunk->print_constants(this->config);
+      this->chunk.print_constants(this->config);
     }
     if constexpr (PRINT_LOCAL_MAPPING) {
-      this->chunk->print_local_map(this->config);
+      this->chunk.print_local_map(this->config);
     }
-    while (this->ip < this->chunk->end()) {
+    while (this->ip < this->chunk.end()) {
       if constexpr (DISASSEMBLE_INSTRUCTIONS) {
         if constexpr (PRINT_STACK) {
-          this->chunk->print_stack(this->config);
+          this->chunk.print_stack(this->config);
         }
-        this->disassemble_instruction(*this->chunk, *this->ip, this->ip - this->chunk->begin());
+        this->disassemble_instruction(*this->ip, this->ip - this->chunk.begin());
       }
 
       switch (this->ip->major_opcode) {
         case OpCode::NO_OP:
           break;
         case OpCode::CONSTANT: {
-          this->chunk->push_stack(this->chunk->constant_at(this->ip->modifying_bits));
+          this->chunk.push_stack(this->chunk.constant_at(this->ip->modifying_bits));
         } break;
         case OpCode::NIL: {
-          this->chunk->push_stack(Value());
+          this->chunk.push_stack(Value());
         } break;
         case OpCode::TRUE: {
-          this->chunk->push_stack(Value(true));
+          this->chunk.push_stack(Value(true));
         } break;
         case OpCode::FALSE: {
-          this->chunk->push_stack(Value(false));
+          this->chunk.push_stack(Value(false));
         } break;
         case OpCode::POP: {
-          this->chunk->pop_stack();
+          this->chunk.pop_stack();
         } break;
         case OpCode::POP_N: {
-          this->chunk->pop_stack_n(this->ip->modifying_bits);
+          this->chunk.pop_stack_n(this->ip->modifying_bits);
         } break;
         case OpCode::LOOKUP_LOCAL: {
-          this->chunk->push_stack(this->chunk->index_stack(this->ip->modifying_bits));
+          this->chunk.push_stack(this->chunk.index_stack(this->ip->modifying_bits));
         } break;
         case OpCode::ASSIGN_LOCAL: {
-          this->chunk->index_stack_mut(this->ip->modifying_bits) = this->chunk->peek_stack();
+          this->chunk.index_stack_mut(this->ip->modifying_bits) = this->chunk.peek_stack();
         } break;
         case OpCode::LOOKUP_GLOBAL: {
-          Value name_value = this->chunk->constant_at(this->ip->modifying_bits);
+          Value name_value = this->chunk.constant_at(this->ip->modifying_bits);
           if (!name_value.is_type(Value::Type::String)) {
             THROW_RUNTIME_ERROR("invalid type for variable name");
           }
@@ -116,10 +131,10 @@ namespace ss
             ss << "variable '" << name << "' is undefined";
             THROW_RUNTIME_ERROR(ss.str());
           }
-          this->chunk->push_stack(var->second);
+          this->chunk.push_stack(var->second);
         } break;
         case OpCode::DEFINE_GLOBAL: {
-          Value name_value = this->chunk->constant_at(this->ip->modifying_bits);
+          Value name_value = this->chunk.constant_at(this->ip->modifying_bits);
           if (!name_value.is_type(Value::Type::String)) {
             THROW_RUNTIME_ERROR("invalid type for variable name");
           }
@@ -129,10 +144,10 @@ namespace ss
             ss << "variable '" << name << "' is already defined";
             THROW_RUNTIME_ERROR(ss.str());
           }
-          this->globals.emplace(name, this->chunk->pop_stack());
+          this->globals.emplace(name, this->chunk.pop_stack());
         } break;
         case OpCode::ASSIGN_GLOBAL: {
-          Value name_value = this->chunk->constant_at(this->ip->modifying_bits);
+          Value name_value = this->chunk.constant_at(this->ip->modifying_bits);
           if (!name_value.is_type(Value::Type::String)) {
             THROW_RUNTIME_ERROR("invalid type for variable name");
           }
@@ -142,82 +157,82 @@ namespace ss
             ss << "variable '" << name << "' is undefined";
             THROW_RUNTIME_ERROR(ss.str());
           }
-          this->globals[name] = this->chunk->peek_stack();
+          this->globals[name] = this->chunk.peek_stack();
         } break;
         case OpCode::EQUAL: {
-          Value b = this->chunk->pop_stack();
-          Value a = this->chunk->pop_stack();
-          this->chunk->push_stack(a == b);
+          Value b = this->chunk.pop_stack();
+          Value a = this->chunk.pop_stack();
+          this->chunk.push_stack(a == b);
         } break;
         case OpCode::NOT_EQUAL: {
-          Value b = this->chunk->pop_stack();
-          Value a = this->chunk->pop_stack();
-          this->chunk->push_stack(a != b);
+          Value b = this->chunk.pop_stack();
+          Value a = this->chunk.pop_stack();
+          this->chunk.push_stack(a != b);
         } break;
         case OpCode::GREATER: {
-          Value b = this->chunk->pop_stack();
-          Value a = this->chunk->pop_stack();
-          this->chunk->push_stack(a > b);
+          Value b = this->chunk.pop_stack();
+          Value a = this->chunk.pop_stack();
+          this->chunk.push_stack(a > b);
         } break;
         case OpCode::GREATER_EQUAL: {
-          Value b = this->chunk->pop_stack();
-          Value a = this->chunk->pop_stack();
-          this->chunk->push_stack(a >= b);
+          Value b = this->chunk.pop_stack();
+          Value a = this->chunk.pop_stack();
+          this->chunk.push_stack(a >= b);
         } break;
         case OpCode::LESS: {
-          Value b = this->chunk->pop_stack();
-          Value a = this->chunk->pop_stack();
-          this->chunk->push_stack(a < b);
+          Value b = this->chunk.pop_stack();
+          Value a = this->chunk.pop_stack();
+          this->chunk.push_stack(a < b);
         } break;
         case OpCode::LESS_EQUAL: {
-          Value b = this->chunk->pop_stack();
-          Value a = this->chunk->pop_stack();
-          this->chunk->push_stack(a <= b);
+          Value b = this->chunk.pop_stack();
+          Value a = this->chunk.pop_stack();
+          this->chunk.push_stack(a <= b);
         } break;
         case OpCode::CHECK: {
-          Value v = this->chunk->pop_stack();
-          this->chunk->push_stack(this->chunk->peek_stack() == v);
+          Value v = this->chunk.pop_stack();
+          this->chunk.push_stack(this->chunk.peek_stack() == v);
         } break;
         case OpCode::ADD: {
-          Value b = this->chunk->pop_stack();
-          Value a = this->chunk->pop_stack();
-          this->chunk->push_stack(a + b);
+          Value b = this->chunk.pop_stack();
+          Value a = this->chunk.pop_stack();
+          this->chunk.push_stack(a + b);
         } break;
         case OpCode::SUB: {
-          Value b = this->chunk->pop_stack();
-          Value a = this->chunk->pop_stack();
-          this->chunk->push_stack(a - b);
+          Value b = this->chunk.pop_stack();
+          Value a = this->chunk.pop_stack();
+          this->chunk.push_stack(a - b);
         } break;
         case OpCode::MUL: {
-          Value b = this->chunk->pop_stack();
-          Value a = this->chunk->pop_stack();
-          this->chunk->push_stack(a * b);
+          Value b = this->chunk.pop_stack();
+          Value a = this->chunk.pop_stack();
+          this->chunk.push_stack(a * b);
         } break;
         case OpCode::DIV: {
-          Value b = this->chunk->pop_stack();
-          Value a = this->chunk->pop_stack();
-          this->chunk->push_stack(a / b);
+          Value b = this->chunk.pop_stack();
+          Value a = this->chunk.pop_stack();
+          this->chunk.push_stack(a / b);
         } break;
         case OpCode::MOD: {
-          Value b = this->chunk->pop_stack();
-          Value a = this->chunk->pop_stack();
-          this->chunk->push_stack(a % b);
+          Value b = this->chunk.pop_stack();
+          Value a = this->chunk.pop_stack();
+          this->chunk.push_stack(a % b);
         } break;
         case OpCode::NOT: {
-          this->chunk->push_stack(!this->chunk->pop_stack());
+          this->chunk.push_stack(!this->chunk.pop_stack());
         } break;
         case OpCode::NEGATE: {
-          this->chunk->push_stack(-this->chunk->pop_stack());
+          this->chunk.push_stack(-this->chunk.pop_stack());
         } break;
         case OpCode::PRINT: {
-          config.write_line(chunk->pop_stack());
+          config.write_line(this->chunk.pop_stack());
         } break;
         case OpCode::JUMP: {
           this->ip += this->ip->modifying_bits;
           continue;
         } break;
         case OpCode::JUMP_IF_FALSE: {
-          if (!this->chunk->peek_stack().truthy()) {
+          if (!this->chunk.peek_stack().truthy()) {
             this->ip += this->ip->modifying_bits;
             continue;
           }
@@ -227,21 +242,21 @@ namespace ss
           continue;
         } break;
         case OpCode::OR: {
-          Value v = this->chunk->peek_stack();
+          Value v = this->chunk.peek_stack();
           if (v.truthy()) {
             this->ip += this->ip->modifying_bits;
             continue;
           } else {
-            this->chunk->pop_stack();
+            this->chunk.pop_stack();
           }
         } break;
         case OpCode::AND: {
-          Value v = this->chunk->peek_stack();
+          Value v = this->chunk.peek_stack();
           if (!v.truthy()) {
             this->ip += this->ip->modifying_bits;
             continue;
           } else {
-            this->chunk->pop_stack();
+            this->chunk.pop_stack();
           }
         } break;
         case OpCode::RETURN: {
@@ -256,27 +271,19 @@ namespace ss
       this->ip++;
     }
     if constexpr (PRINT_STACK) {
-      this->chunk->print_stack(this->config);
+      this->chunk.print_stack(this->config);
     }
   }
 
-  void VM::interpret(BytecodeChunk& chunk)
+  void VM::disassemble_chunk() noexcept
   {
-    this->chunk = &chunk;
-    this->ip    = this->chunk->begin();
-
-    this->run_chunk();
-  }
-
-  void VM::disassemble_chunk(std::string name, BytecodeChunk& chunk) noexcept
-  {
-    this->config.write_line("== ", name, " ==");
-
+    this->config.write_line("<< ", "MAIN", " >>");
     std::size_t offset = 0;
-    for (const auto& i : chunk) { this->disassemble_instruction(chunk, i, offset++); }
+    for (const auto& i : chunk) { this->disassemble_instruction(i, offset++); }
+    this->config.write_line("<< ", "END", " >>");
   }
 
-  void VM::disassemble_instruction(BytecodeChunk& chunk, Instruction i, std::size_t offset) noexcept
+  void VM::disassemble_instruction(Instruction i, std::size_t offset) noexcept
   {
 #define SS_SIMPLE_PRINT_CASE(name)                                                                                             \
   case OpCode::name: {                                                                                                         \

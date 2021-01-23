@@ -17,6 +17,7 @@ namespace ss
     ~VM() = default;
 
     auto repl(VMConfig cfg = VMConfig::basic) -> int;
+
     void run_script(std::string src);
 
     void set_var(Value::StringType name, Value value) noexcept;
@@ -26,16 +27,15 @@ namespace ss
 
    private:
     VMConfig                    config;
-    BytecodeChunk*              chunk;
+    BytecodeChunk               chunk;
     BytecodeChunk::CodeIterator ip;
     GlobalMap                   globals;
 
-    void run();
+    void run_line(std::string line);
+    void compile(std::string&& src);
+    void execute();
 
-    void interpret(BytecodeChunk& chunk);
-    void run_chunk();
-
-    void disassemble_chunk(std::string name, BytecodeChunk& chunk) noexcept;
-    void disassemble_instruction(BytecodeChunk& chunk, Instruction i, std::size_t offset) noexcept;
+    void disassemble_chunk() noexcept;
+    void disassemble_instruction(Instruction i, std::size_t offset) noexcept;
   };
 }  // namespace ss

@@ -58,18 +58,14 @@ TEST_F(TestBytecodeChunk, METHOD(push_stack__pop_stack, can_push_onto_stack_and_
 
 TEST_F(TestBytecodeChunk, METHOD(pop_stack_n, removes_the_specified_range))
 {
-  for (int i = 0; i < 10; i++) {
-    this->chunk.push_stack(Value(1.0 * i));
-  }
+  for (int i = 0; i < 10; i++) { this->chunk.push_stack(Value(1.0 * i)); }
 
   EXPECT_EQ(this->chunk.stack_size(), 10);
 
   this->chunk.pop_stack_n(5);
 
   EXPECT_EQ(this->chunk.stack_size(), 5);
-  for (int i = 4; i < 0; i--) {
-    EXPECT_EQ(this->chunk.pop_stack(), Value(1.0 * i));
-  }
+  for (int i = 4; i < 0; i--) { EXPECT_EQ(this->chunk.pop_stack(), Value(1.0 * i)); }
 }
 
 using ss::OpCode;
@@ -98,7 +94,7 @@ TEST(Scanner, METHOD(scan, some_code))
 {
   std::string text = "1 * 2 + 4 - 8 / 16";
 
-  Scanner scanner(text);
+  Scanner scanner(std::move(text));
 
   std::vector<Token> expected = {
    Token{
@@ -167,9 +163,7 @@ TEST(Scanner, METHOD(scan, some_code))
 
   ASSERT_EQ(expected.size(), tokens.size());
 
-  for (std::size_t i = 0; i < expected.size(); i++) {
-    EXPECT_EQ(expected[i], tokens[i]) << "i: " << i;
-  }
+  for (std::size_t i = 0; i < expected.size(); i++) { EXPECT_EQ(expected[i], tokens[i]) << "i: " << i; }
 }
 
 using ss::Instruction;
@@ -180,7 +174,7 @@ using ss::Parser;
 TEST(Parser, METHOD(parse, some_math))
 {
   std::string src = "!(5 - 4 > 3 * 2 == !nil);";
-  Scanner     scanner(src);
+  Scanner     scanner(std::move(src));
 
   auto tokens = scanner.scan();
 

@@ -476,13 +476,13 @@ namespace ss
   class Scanner
   {
    public:
-    Scanner(std::string& src) noexcept;
+    Scanner(std::string&& src) noexcept;
     ~Scanner() = default;
 
     auto scan() -> std::vector<Token>;
 
    private:
-    std::string&          source;
+    std::string&&         source;
     std::string::iterator start;
     std::string::iterator current;
     std::size_t           line;
@@ -675,7 +675,7 @@ namespace ss
   {
    public:
     Compiler() = default;
-    void compile(std::string& src, BytecodeChunk& chunk);
+    void compile(std::string&& src, BytecodeChunk& chunk);
   };
 
 }  // namespace ss
