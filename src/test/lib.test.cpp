@@ -79,3 +79,9 @@ TEST_F(TestVM, if_else_statements)
 
   EXPECT_EQ(this->ostream->str(), "true\nfalse\ny\nor\n");
 }
+
+TEST_F(TestVM, ands_and_ors)
+{
+  this->vm->run_script("print true or false and true;");
+  EXPECT_EQ(this->ostream->str(), "true\n");
+}
