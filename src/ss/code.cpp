@@ -1036,25 +1036,6 @@ namespace ss
     this->patch_jump(else_location);
   }
 
-  void Parser::while_stmt()
-  {
-    std::size_t loop_start = this->chunk.instruction_count();
-
-    this->expression();
-    this->consume(Token::Type::LEFT_BRACE, "expect '{' after condition");
-
-    std::size_t exit_jmp = this->emit_jump(Instruction{OpCode::JUMP_IF_FALSE});
-
-    this->emit_instruction(Instruction{OpCode::POP});
-    this->block_stmt();
-
-    this->emit_instruction(Instruction{OpCode::LOOP, this->chunk.instruction_count() - loop_start});
-
-    this->patch_jump(exit_jmp);
-
-    this->emit_instruction(Instruction{OpCode::POP});
-  }
-
   void Parser::loop_stmt()
   {
     std::size_t loop_start = this->chunk.instruction_count();
@@ -1066,36 +1047,25 @@ namespace ss
     });
   }
 
-  void Parser::break_stmt()
+  void Parser::while_stmt()
   {
-    if (!this->in_loop) {
-      this->error(
-       this->previous(), "continues can only be used within 'loop' constructs, if using a while or for, consider switching");
-    }
-    this->consume(Token::Type::SEMICOLON, "expect ';' after break");
-    std::size_t count = 0;
-    while (!this->locals.empty() && this->locals.back().depth > this->loop_depth) {
-      this->locals.pop_back();
-      count++;
-    }
-    this->emit_instruction(Instruction{OpCode::POP_N, count});
-    this->breaks.push_back(this->emit_jump(Instruction{OpCode::JUMP}));
-  }
+    std::size_t loop_start = this->chunk.instruction_count();
 
-  void Parser::continue_stmt()
-  {
-    if (!this->in_loop) {
-      this->error(
-       this->previous(), "continues can only be used within 'loop' constructs, if using a while or for, consider switching");
-    }
-    this->consume(Token::Type::SEMICOLON, "expect ';' after continue");
-    std::size_t count = 0;
-    while (!this->locals.empty() && this->locals.back().depth > this->loop_depth) {
-      this->locals.pop_back();
-      count++;
-    }
-    this->emit_instruction(Instruction{OpCode::POP_N, count});
-    this->emit_instruction(Instruction{OpCode::LOOP, this->chunk.instruction_count() - this->continue_jmp});
+    this->expression();
+    this->consume(Token::Type::LEFT_BRACE, "expect '{' after condition");
+
+    std::size_t exit_jmp = this->emit_jump(Instruction{OpCode::JUMP_IF_FALSE});
+
+    this->emit_instruction(Instruction{OpCode::POP});
+    this->wrap_loop(loop_start, [&] {
+      this->block_stmt();
+
+      this->emit_instruction(Instruction{OpCode::LOOP, this->chunk.instruction_count() - loop_start});
+
+      this->patch_jump(exit_jmp);
+      this->emit_instruction(Instruction{OpCode::POP});
+      for (const auto jmp : this->breaks) { this->patch_jump(jmp); }
+    });
   }
 
   void Parser::for_stmt()
@@ -1137,14 +1107,17 @@ namespace ss
         this->patch_jump(body_jmp);
       }
 
-      this->block_stmt();
+      this->wrap_loop(loop_start, [&] {
+        this->block_stmt();
 
-      this->emit_instruction(Instruction{OpCode::LOOP, this->chunk.instruction_count() - loop_start});
+        this->emit_instruction(Instruction{OpCode::LOOP, this->chunk.instruction_count() - loop_start});
 
-      if (has_exit) {
-        this->patch_jump(exit_jmp);
-        this->emit_instruction(Instruction{OpCode::POP});
-      }
+        if (has_exit) {
+          this->patch_jump(exit_jmp);
+          this->emit_instruction(Instruction{OpCode::POP});
+          for (const auto jmp : this->breaks) { this->patch_jump(jmp); }
+        }
+      });
     });
   }
 
@@ -1165,6 +1138,36 @@ namespace ss
     this->emit_instruction(Instruction{OpCode::POP});
 
     this->consume(Token::Type::RIGHT_BRACE, "expected '}' after match");
+  }
+
+  void Parser::break_stmt()
+  {
+    if (!this->in_loop) {
+      this->error(this->previous(), "breaks can only be used within loops");
+    }
+    this->consume(Token::Type::SEMICOLON, "expect ';' after break");
+    std::size_t count = 0;
+    while (!this->locals.empty() && this->locals.back().depth > this->loop_depth) {
+      this->locals.pop_back();
+      count++;
+    }
+    this->emit_instruction(Instruction{OpCode::POP_N, count});
+    this->breaks.push_back(this->emit_jump(Instruction{OpCode::JUMP}));
+  }
+
+  void Parser::continue_stmt()
+  {
+    if (!this->in_loop) {
+      this->error(this->previous(), "continues can only be used within loops");
+    }
+    this->consume(Token::Type::SEMICOLON, "expect ';' after continue");
+    std::size_t count = 0;
+    while (!this->locals.empty() && this->locals.back().depth > this->loop_depth) {
+      this->locals.pop_back();
+      count++;
+    }
+    this->emit_instruction(Instruction{OpCode::POP_N, count});
+    this->emit_instruction(Instruction{OpCode::LOOP, this->chunk.instruction_count() - this->continue_jmp});
   }
 
   void Compiler::compile(std::string& src, BytecodeChunk& chunk)

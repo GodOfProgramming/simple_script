@@ -663,11 +663,11 @@ namespace ss
     void let_stmt();
     void block_stmt();
     void if_stmt();
-    void while_stmt();
     void loop_stmt();
+    void while_stmt();
+    void for_stmt();
     void break_stmt();
     void continue_stmt();
-    void for_stmt();
     void match_stmt();
   };
 
