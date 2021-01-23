@@ -13,6 +13,10 @@ namespace ss
 
   Value::Value(BoolType v): value(v) {}
 
+  Value::Value(IntType v): value(v) {}
+
+  Value::Value(UintType v): value(v) {}
+
   Value::Value(NumberType v): value(v) {}
 
   Value::Value(StringType v): value(v) {}
@@ -21,7 +25,7 @@ namespace ss
 
   Value::Value(FunctionType v): value(v) {}
 
-  auto Value::boolean() const -> BoolType
+  auto Value::as_bool() const -> BoolType
   {
     if (this->is_type(Type::Bool)) {
       return std::get<BoolType>(this->value);
@@ -30,7 +34,25 @@ namespace ss
     }
   }
 
-  auto Value::number() const -> NumberType
+  auto Value::as_int() const -> IntType
+  {
+    if (this->is_type(Type::Int)) {
+      return std::get<IntType>(this->value);
+    } else {
+      return IntType();
+    }
+  }
+
+  auto Value::as_uint() const -> UintType
+  {
+    if (this->is_type(Type::Uint)) {
+      return std::get<UintType>(this->value);
+    } else {
+      return BoolType();
+    }
+  }
+
+  auto Value::as_number() const -> NumberType
   {
     if (this->is_type(Type::Number)) {
       return std::get<NumberType>(this->value);
@@ -39,7 +61,7 @@ namespace ss
     }
   }
 
-  auto Value::string() const -> StringType
+  auto Value::as_string() const -> StringType
   {
     if (this->is_type(Type::String)) {
       return std::get<StringType>(this->value);
@@ -48,7 +70,7 @@ namespace ss
     }
   }
 
-  auto Value::function() const -> FunctionType
+  auto Value::as_function() const -> FunctionType
   {
     if (this->is_type(Type::Function)) {
       return std::get<FunctionType>(this->value);
@@ -64,7 +86,7 @@ namespace ss
         return false;
       }
       case Type::Bool: {
-        return this->boolean();
+        return this->as_bool();
       }
       default: {
         return true;
@@ -106,6 +128,12 @@ namespace ss
   auto Value::operator-() const -> Value
   {
     switch (this->type()) {
+      case Type::Int: {
+        return Value(-std::get<IntType>(this->value));
+      }
+      case Type::Uint: {
+        return Value(-IntType{std::get<UintType>(this->value)});
+      }
       case Type::Number: {
         return Value(-std::get<NumberType>(this->value));
       }
@@ -292,6 +320,18 @@ namespace ss
   }
 
   auto Value::operator=(NilType v) noexcept -> Value&
+  {
+    this->value = v;
+    return *this;
+  }
+
+  auto Value::operator=(IntType v) noexcept -> Value&
+  {
+    this->value = v;
+    return *this;
+  }
+
+  auto Value::operator=(UintType v) noexcept -> Value&
   {
     this->value = v;
     return *this;

@@ -29,6 +29,7 @@ namespace ss
     VMConfig                    config;
     BytecodeChunk               chunk;
     BytecodeChunk::CodeIterator ip;
+    std::size_t                 sp;
 
     void run_line(std::string line);
     void compile(std::string filename, std::string&& src);

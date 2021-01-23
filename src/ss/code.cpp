@@ -764,6 +764,21 @@ namespace ss
     this->named_variable(this->previous(), can_assign);
   }
 
+  void Parser::make_function(FnType type)
+  {
+    (void)type;
+    // TODO figure out how to order function code better
+    auto after = this->emit_jump(Instruction{OpCode::JUMP});
+    this->wrap_scope([&] {
+      this->consume(Token::Type::LEFT_PAREN, "expect '(' after function name");
+      this->consume(Token::Type::RIGHT_PAREN, "expect ')' after parameters");
+      this->consume(Token::Type::LEFT_BRACE, "expect '{' before function body");
+
+      this->block_stmt();
+    });
+    this->patch_jump(after);
+  }
+
   void Parser::named_variable(TokenIterator name, bool can_assign)
   {
     auto lookup = this->resolve_local(name);
@@ -1001,6 +1016,10 @@ namespace ss
       case Token::Type::CONTINUE: {
         this->advance();
         this->continue_stmt();
+      } break;
+      case Token::Type::FN: {
+        this->advance();
+        this->fn_stmt();
       } break;
       case Token::Type::FOR: {
         this->advance();
@@ -1307,6 +1326,16 @@ namespace ss
 
     Compiler compiler;
     compiler.compile(std::move(contents), this->chunk, path.string());
+  }
+
+  void Parser::fn_stmt()
+  {
+    auto global = this->parse_variable("expected function name");
+    if (this->scope_depth > 0) {
+      this->locals.back().initialized = true;
+    }
+    this->make_function(FnType::FUNCTION);
+    this->define_variable(global);
   }
 
   void Compiler::compile(std::string&& src, BytecodeChunk& chunk, std::string current_file)

@@ -11,7 +11,7 @@
 
 namespace ss
 {
-  VM::VM(VMConfig cfg): config(cfg) {}
+  VM::VM(VMConfig cfg): config(cfg), sp(0) {}
 
   void VM::set_var(Value::StringType name, Value value) noexcept
   {
@@ -135,7 +135,7 @@ namespace ss
           if (!name_value.is_type(Value::Type::String)) {
             THROW_RUNTIME_ERROR("invalid type for variable name");
           }
-          Value::StringType name = name_value.string();
+          Value::StringType name = name_value.as_string();
           auto              var  = this->chunk.find_global(name);
           if (!this->chunk.is_global_found(var)) {
             std::stringstream ss;
@@ -149,7 +149,7 @@ namespace ss
           if (!name_value.is_type(Value::Type::String)) {
             THROW_RUNTIME_ERROR("invalid type for variable name");
           }
-          Value::StringType name = name_value.string();
+          Value::StringType name = name_value.as_string();
           auto              var  = this->chunk.find_global(name);
           if (this->chunk.is_global_found(var)) {
             std::stringstream ss;
@@ -163,7 +163,7 @@ namespace ss
           if (!name_value.is_type(Value::Type::String)) {
             THROW_RUNTIME_ERROR("invalid type for variable name");
           }
-          Value::StringType name = name_value.string();
+          Value::StringType name = name_value.as_string();
           auto              var  = this->chunk.find_global(std::move(name));
           if (!this->chunk.is_global_found(var)) {
             std::stringstream ss;

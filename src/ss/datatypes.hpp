@@ -16,6 +16,8 @@ namespace ss
     {
       Nil,
       Bool,
+      Int,
+      Uint,
       Number,
       String,
       Function,
@@ -55,12 +57,16 @@ namespace ss
     };
 
     using BoolType     = bool;
+    using IntType      = long;
+    using UintType     = std::size_t;
     using NumberType   = double;
     using StringType   = std::string;
     using FunctionType = std::shared_ptr<Function>;
 
     Value();
     Value(BoolType v);
+    Value(IntType v);
+    Value(UintType v);
     Value(NumberType v);
     Value(StringType v);
     Value(const char* v);
@@ -69,10 +75,12 @@ namespace ss
     auto type() const noexcept -> Type;
     auto is_type(Type t) const noexcept -> bool;
 
-    auto boolean() const -> BoolType;
-    auto number() const -> NumberType;
-    auto string() const -> StringType;
-    auto function() const -> FunctionType;
+    auto as_bool() const -> BoolType;
+    auto as_int() const -> IntType;
+    auto as_uint() const -> UintType;
+    auto as_number() const -> NumberType;
+    auto as_string() const -> StringType;
+    auto as_function() const -> FunctionType;
 
     auto truthy() const -> bool;
     auto to_string() const -> std::string;
@@ -87,6 +95,8 @@ namespace ss
     auto operator%(const Value& other) const -> Value;
 
     auto operator=(NilType v) noexcept -> Value&;
+    auto operator=(IntType v) noexcept -> Value&;
+    auto operator=(UintType v) noexcept -> Value&;
     auto operator=(BoolType b) noexcept -> Value&;
     auto operator=(NumberType v) noexcept -> Value&;
     auto operator=(StringType v) noexcept -> Value&;
@@ -103,7 +113,7 @@ namespace ss
     static NilType nil;
 
    private:
-    std::variant<NilType, BoolType, NumberType, StringType, FunctionType> value;
+    std::variant<NilType, BoolType, IntType, UintType, NumberType, StringType, FunctionType> value;
   };
 
   auto operator<<(std::ostream& ostream, const Value& value) -> std::ostream&;

@@ -10,39 +10,51 @@ TEST(Value, METHOD(boolean, when_a_bool_returns_the_internal_value))
 {
   Value v1(true);
   Value v2(false);
-  EXPECT_TRUE(v1.boolean());
-  EXPECT_FALSE(v2.boolean());
+  EXPECT_TRUE(v1.as_bool());
+  EXPECT_FALSE(v2.as_bool());
 }
 
 TEST(Value, METHOD(boolean, when_not_a_bool_returns_false_always))
 {
   Value v;
-  EXPECT_FALSE(v.boolean());
+  EXPECT_FALSE(v.as_bool());
+}
+
+TEST(Value, METHOD(as_int, when_an_int_returns_the_internal_value))
+{
+  Value v(Value::IntType{-1});
+  EXPECT_EQ(v.as_int(), -1);
+}
+
+TEST(Value, METHOD(as_uint, when_an_uint_returns_the_internal_value))
+{
+  Value v(Value::UintType{1});
+  EXPECT_EQ(v.as_uint(), 1);
 }
 
 TEST(Value, METHOD(number, when_a_number_returns_the_internal_value))
 {
   Value v(1.0);
-  EXPECT_EQ(v.number(), 1);
+  EXPECT_EQ(v.as_number(), 1);
 }
 
 TEST(Value, METHOD(number, when_not_a_number_returns_0))
 {
   Value v;
-  EXPECT_EQ(v.number(), 0);
+  EXPECT_EQ(v.as_number(), 0);
 }
 
 TEST(Value, METHOD(string, when_a_string_returns_the_internal_value))
 {
   Value v("string");
   EXPECT_EQ(v.type(), Value::Type::String);
-  EXPECT_EQ(v.string(), "string");
+  EXPECT_EQ(v.as_string(), "string");
 }
 
 TEST(Value, METHOD(string, when_not_a_string_returns_empty_string))
 {
   Value v;
-  EXPECT_EQ(v.string(), "");
+  EXPECT_EQ(v.as_string(), "");
 }
 
 TEST(Value, METHOD(to_string, when_nil_returns_the_word_nil))
@@ -124,11 +136,11 @@ TEST(Value, METHOD(operator_not, can_inverse_truth))
   Value v4(1.0);
   Value v5("some string");
 
-  EXPECT_TRUE((!v1).boolean());
-  EXPECT_FALSE((!v2).boolean());
-  EXPECT_TRUE((!v3).boolean());
-  EXPECT_FALSE((!v4).boolean());
-  EXPECT_FALSE((!v5).boolean());
+  EXPECT_TRUE((!v1).as_bool());
+  EXPECT_FALSE((!v2).as_bool());
+  EXPECT_TRUE((!v3).as_bool());
+  EXPECT_FALSE((!v4).as_bool());
+  EXPECT_FALSE((!v5).as_bool());
 }
 
 TEST(Value, METHOD(operator_add, can_add_two_numbers))

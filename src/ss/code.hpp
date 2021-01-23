@@ -590,6 +590,11 @@ namespace ss
       std::size_t index;
     };
 
+    enum class FnType
+    {
+      FUNCTION,
+    };
+
    public:
     Parser(TokenList&& tokens, BytecodeChunk& chunk, std::string current_file) noexcept;
     ~Parser() = default;
@@ -651,6 +656,7 @@ namespace ss
     void make_number(bool can_assign);
     void make_string(bool can_assign);
     void make_variable(bool assign);
+    void make_function(FnType t);
     void named_variable(TokenIterator name, bool assign);
     auto parse_variable(std::string err_msg) -> std::size_t;
     /**
@@ -690,6 +696,7 @@ namespace ss
     void match_stmt();
     void load_stmt();
     void loadr_stmt();
+    void fn_stmt();
   };
 
   class Compiler
