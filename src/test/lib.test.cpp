@@ -68,3 +68,14 @@ TEST_F(TestVM, if_statements)
 
   EXPECT_EQ(this->ostream->str(), "true\nafter\n");
 }
+
+TEST_F(TestVM, if_else_statements)
+{
+  const char* script = {
+#include "scripts/if_else_script.ss"
+  };
+
+  this->vm->run_script(script);
+
+  EXPECT_EQ(this->ostream->str(), "true\nfalse\n");
+}

@@ -31,12 +31,18 @@ while getopts 'habtg' flag; do
 	esac
 done
 
+shift $((OPTIND-1))
+
 if [ $build -eq 1 ]; then
 	make -j$(($(nproc) - 1)) || exit $?
 fi
 
 if [ $run_tests -eq 1 ]; then
-	SimpleScriptTest
+	if [ ! -z "$1" ]; then
+		SimpleScriptTest --gtest_filter="$1"
+	else
+		SimpleScriptTest
+	fi
 fi
 
 if [ $gen_coverage -eq 1 ]; then

@@ -967,9 +967,18 @@ namespace ss
     this->expression();
     this->consume(Token::Type::LEFT_BRACE, "expect '{' after condition");
 
-    std::size_t jump_offset = this->emit_jump(Instruction{OpCode::JUMP_IF_FALSE});
+    std::size_t jump_location = this->emit_jump(Instruction{OpCode::JUMP_IF_FALSE});
     this->block_statement();
-    this->patch_jump(jump_offset);
+
+    std::size_t else_location = this->emit_jump(Instruction{OpCode::JUMP});
+    this->patch_jump(jump_location);
+
+    if (this->advance_if_matches(Token::Type::ELSE)) {
+      this->consume(Token::Type::LEFT_BRACE, "expect '{' after condition");
+      this->block_statement();
+    }
+
+    this->patch_jump(else_location);
   }
 
   void Compiler::compile(std::string& src, BytecodeChunk& chunk)

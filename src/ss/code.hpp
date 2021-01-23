@@ -130,6 +130,10 @@ namespace ss
     /**
      * @brief Jumps to a code location indicated by the modifying bits
      */
+    JUMP,
+    /**
+     * @brief Jumps to a code location indicated by the modifying bits
+     */
     JUMP_IF_FALSE,
     /**
      * @brief TODO
@@ -173,6 +177,7 @@ namespace ss
       SS_ENUM_TO_STR_CASE(OpCode, NOT)
       SS_ENUM_TO_STR_CASE(OpCode, NEGATE)
       SS_ENUM_TO_STR_CASE(OpCode, PRINT)
+      SS_ENUM_TO_STR_CASE(OpCode, JUMP)
       SS_ENUM_TO_STR_CASE(OpCode, JUMP_IF_FALSE)
       SS_ENUM_TO_STR_CASE(OpCode, RETURN)
       default: {

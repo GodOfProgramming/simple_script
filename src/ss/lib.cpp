@@ -208,9 +208,14 @@ namespace ss
         case OpCode::PRINT: {
           config.write_line(chunk->pop_stack());
         } break;
+        case OpCode::JUMP: {
+          this->ip += this->ip->modifying_bits;
+          continue;
+        } break;
         case OpCode::JUMP_IF_FALSE: {
           if (!this->chunk->peek_stack().truthy()) {
             this->ip += this->ip->modifying_bits;
+            continue;
           }
         } break;
         case OpCode::RETURN: {
@@ -319,7 +324,7 @@ namespace ss
       })
       SS_COMPLEX_PRINT_CASE(ASSIGN_GLOBAL, {
         Value constant = chunk.constant_at(i.modifying_bits);
-        this->config.write(std::setw(16), std::left, OpCode::DEFINE_GLOBAL);
+        this->config.write(std::setw(16), std::left, OpCode::ASSIGN_GLOBAL);
         this->config.reset_ostream();
         this->config.write(' ', std::setw(4), i.modifying_bits);
         this->config.reset_ostream();
@@ -340,7 +345,18 @@ namespace ss
       SS_SIMPLE_PRINT_CASE(NOT)
       SS_SIMPLE_PRINT_CASE(NEGATE)
       SS_SIMPLE_PRINT_CASE(PRINT)
-      SS_SIMPLE_PRINT_CASE(JUMP_IF_FALSE)
+      SS_COMPLEX_PRINT_CASE(JUMP, {
+        this->config.write(std::setw(16), std::left, OpCode::JUMP);
+        this->config.reset_ostream();
+        this->config.write_line(' ', std::setw(4), i.modifying_bits);
+        this->config.reset_ostream();
+      })
+      SS_COMPLEX_PRINT_CASE(JUMP_IF_FALSE, {
+        this->config.write(std::setw(16), std::left, OpCode::JUMP_IF_FALSE);
+        this->config.reset_ostream();
+        this->config.write_line(' ', std::setw(4), i.modifying_bits);
+        this->config.reset_ostream();
+      })
       SS_SIMPLE_PRINT_CASE(RETURN)
       default: {
         this->config.write_line(i.major_opcode, ": ", i.modifying_bits);
