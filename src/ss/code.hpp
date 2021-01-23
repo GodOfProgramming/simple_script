@@ -136,6 +136,10 @@ namespace ss
      */
     JUMP_IF_FALSE,
     /**
+     * @brief Jumps the instruction pointer backwards N instructions. N specified by the modifying bits
+     */
+    LOOP,
+    /**
      * @brief Peeks at the stack, if the top value is true short circuts to the instruction pointed to by the modifying bit
      */
     OR,
@@ -187,6 +191,7 @@ namespace ss
       SS_ENUM_TO_STR_CASE(OpCode, PRINT)
       SS_ENUM_TO_STR_CASE(OpCode, JUMP)
       SS_ENUM_TO_STR_CASE(OpCode, JUMP_IF_FALSE)
+      SS_ENUM_TO_STR_CASE(OpCode, LOOP)
       SS_ENUM_TO_STR_CASE(OpCode, OR)
       SS_ENUM_TO_STR_CASE(OpCode, AND)
       SS_ENUM_TO_STR_CASE(OpCode, RETURN)
@@ -619,6 +624,7 @@ namespace ss
     void let_stmt();
     void block_stmt();
     void if_stmt();
+    void while_statement();
   };
 
   class Compiler

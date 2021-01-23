@@ -85,3 +85,14 @@ TEST_F(TestVM, ands_and_ors)
   this->vm->run_script("print true or false and true;");
   EXPECT_EQ(this->ostream->str(), "true\n");
 }
+
+TEST_F(TestVM, while_stmt)
+{
+  const char* script = {
+#include "scripts/while_script.ss"
+  };
+
+  this->vm->run_script(script);
+
+  EXPECT_EQ(this->ostream->str(), "0\n1\n2\n");
+}

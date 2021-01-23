@@ -921,6 +921,8 @@ namespace ss
       this->print_stmt();
     } else if (this->advance_if_matches(Token::Type::IF)) {
       this->if_stmt();
+    } else if (this->advance_if_matches(Token::Type::WHILE)) {
+      this->while_statement();
     } else if (this->advance_if_matches(Token::Type::LEFT_BRACE)) {
       this->begin_scope();
       this->block_stmt();
@@ -994,6 +996,24 @@ namespace ss
     }
 
     this->patch_jump(else_location);
+  }
+
+  void Parser::while_statement()
+  {
+    std::size_t loop_start = this->chunk.instruction_count();
+
+    this->expression();
+    this->consume(Token::Type::LEFT_BRACE, "expect '{' after condition");
+
+    std::size_t exit_jmp = this->emit_jump(Instruction{OpCode::JUMP_IF_FALSE});
+
+    this->emit_instruction(Instruction{OpCode::POP});
+    this->block_stmt();
+
+    this->emit_instruction(Instruction{OpCode::LOOP, this->chunk.instruction_count() - loop_start});
+
+    this->patch_jump(exit_jmp);
+    this->emit_instruction(Instruction{OpCode::POP});
   }
 
   void Compiler::compile(std::string& src, BytecodeChunk& chunk)

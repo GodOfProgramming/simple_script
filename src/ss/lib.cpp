@@ -218,6 +218,10 @@ namespace ss
             continue;
           }
         } break;
+        case OpCode::LOOP: {
+          this->ip -= this->ip->modifying_bits;
+          continue;
+        } break;
         case OpCode::OR: {
           Value v = this->chunk->peek_stack();
           if (v.truthy()) {
@@ -370,6 +374,12 @@ namespace ss
         this->config.reset_ostream();
       })
       SS_COMPLEX_PRINT_CASE(JUMP_IF_FALSE, {
+        this->config.write(std::setw(16), std::left, i.major_opcode);
+        this->config.reset_ostream();
+        this->config.write_line(' ', std::setw(4), i.modifying_bits);
+        this->config.reset_ostream();
+      })
+      SS_COMPLEX_PRINT_CASE(LOOP, {
         this->config.write(std::setw(16), std::left, i.major_opcode);
         this->config.reset_ostream();
         this->config.write_line(' ', std::setw(4), i.modifying_bits);
