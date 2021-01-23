@@ -96,6 +96,10 @@ namespace ss
      */
     LESS_EQUAL,
     /**
+     * @brief Pops a value off the stack, and compars it with the peeked value, pushing the new value on
+     */
+    CHECK,
+    /**
      * @brief Pops two values off the stack, calculates the sum, then pushes the result back on
      */
     ADD,
@@ -181,6 +185,7 @@ namespace ss
       SS_ENUM_TO_STR_CASE(OpCode, GREATER_EQUAL)
       SS_ENUM_TO_STR_CASE(OpCode, LESS)
       SS_ENUM_TO_STR_CASE(OpCode, LESS_EQUAL)
+      SS_ENUM_TO_STR_CASE(OpCode, CHECK)
       SS_ENUM_TO_STR_CASE(OpCode, ADD)
       SS_ENUM_TO_STR_CASE(OpCode, SUB)
       SS_ENUM_TO_STR_CASE(OpCode, MUL)
@@ -236,6 +241,7 @@ namespace ss
       GREATER_EQUAL,
       LESS,
       LESS_EQUAL,
+      ARROW,
 
       // Literals.
       IDENTIFIER,
@@ -257,6 +263,7 @@ namespace ss
       RETURN,
       TRUE,
       WHILE,
+      MATCH,
 
       ERROR,
       END_OF_FILE,
@@ -311,6 +318,7 @@ namespace ss
       SS_ENUM_TO_STR_CASE(Token::Type, RETURN)
       SS_ENUM_TO_STR_CASE(Token::Type, TRUE)
       SS_ENUM_TO_STR_CASE(Token::Type, WHILE)
+      SS_ENUM_TO_STR_CASE(Token::Type, MATCH)
       SS_ENUM_TO_STR_CASE(Token::Type, ERROR)
       SS_ENUM_TO_STR_CASE(Token::Type, END_OF_FILE)
       SS_ENUM_TO_STR_CASE(Token::Type, LAST)
@@ -626,6 +634,7 @@ namespace ss
     void if_stmt();
     void while_stmt();
     void for_stmt();
+    void match_stmt();
   };
 
   class Compiler

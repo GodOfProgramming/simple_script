@@ -107,3 +107,14 @@ TEST_F(TestVM, for_stmt)
 
   EXPECT_EQ(this->ostream->str(), "0\n1\n2\n");
 }
+
+TEST_F(TestVM, match_stmt)
+{
+  const char* script = {
+#include "scripts/match_script.ss"
+  };
+
+  this->vm->run_script(script);
+
+  EXPECT_EQ(this->ostream->str(), "at hello\n");
+}

@@ -174,6 +174,10 @@ namespace ss
           Value a = this->chunk->pop_stack();
           this->chunk->push_stack(a <= b);
         } break;
+        case OpCode::CHECK: {
+          Value v = this->chunk->pop_stack();
+          this->chunk->push_stack(this->chunk->peek_stack() == v);
+        } break;
         case OpCode::ADD: {
           Value b = this->chunk->pop_stack();
           Value a = this->chunk->pop_stack();
@@ -251,6 +255,9 @@ namespace ss
       }
       this->ip++;
     }
+    if constexpr (PRINT_STACK) {
+      this->chunk->print_stack(this->config);
+    }
   }
 
   void VM::interpret(BytecodeChunk& chunk)
@@ -266,9 +273,7 @@ namespace ss
     this->config.write_line("== ", name, " ==");
 
     std::size_t offset = 0;
-    for (const auto& i : chunk) {
-      this->disassemble_instruction(chunk, i, offset++);
-    }
+    for (const auto& i : chunk) { this->disassemble_instruction(chunk, i, offset++); }
   }
 
   void VM::disassemble_instruction(BytecodeChunk& chunk, Instruction i, std::size_t offset) noexcept
@@ -359,6 +364,7 @@ namespace ss
       SS_SIMPLE_PRINT_CASE(GREATER_EQUAL)
       SS_SIMPLE_PRINT_CASE(LESS)
       SS_SIMPLE_PRINT_CASE(LESS_EQUAL)
+      SS_SIMPLE_PRINT_CASE(CHECK)
       SS_SIMPLE_PRINT_CASE(ADD)
       SS_SIMPLE_PRINT_CASE(SUB)
       SS_SIMPLE_PRINT_CASE(MUL)

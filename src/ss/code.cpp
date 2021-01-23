@@ -180,9 +180,7 @@ namespace ss
     if (this->stack_empty()) {
       cfg.write_line("[ ]");
     } else {
-      for (const auto& value : this->stack) {
-        cfg.write("[ ", value.to_string(), " ]");
-      }
+      for (const auto& value : this->stack) { cfg.write("[ ", value.to_string(), " ]"); }
       cfg.write_line();
     }
   }
@@ -190,17 +188,13 @@ namespace ss
   void BytecodeChunk::print_constants(VMConfig& cfg) const noexcept
   {
     cfg.write_line("CONSTANTS");
-    for (std::size_t i = 0; i < this->constants.size(); i++) {
-      cfg.write_line(i, "=", this->constant_at(i));
-    }
+    for (std::size_t i = 0; i < this->constants.size(); i++) { cfg.write_line(i, "=", this->constant_at(i)); }
   }
 
   void BytecodeChunk::print_local_map(VMConfig& cfg) const noexcept
   {
     cfg.write_line("LOCALS");
-    for (const auto& pair : this->local_cache) {
-      cfg.write_line(pair.first, "=", pair.second);
-    }
+    for (const auto& pair : this->local_cache) { cfg.write_line(pair.first, "=", pair.second); }
   }
 
   Scanner::Scanner(std::string& src) noexcept: source(src), current(source.begin()), line(1), column(1) {}
@@ -255,7 +249,8 @@ namespace ss
           t = this->advance_if_match('=') ? Token::Type::BANG_EQUAL : Token::Type::BANG;
         } break;
         case '=': {
-          t = this->advance_if_match('=') ? Token::Type::EQUAL_EQUAL : Token::Type::EQUAL;
+          t = this->advance_if_match('=') ? Token::Type::EQUAL_EQUAL
+                                          : this->advance_if_match('>') ? Token::Type::ARROW : Token::Type::EQUAL;
         } break;
         case '<': {
           t = this->advance_if_match('=') ? Token::Type::LESS_EQUAL : Token::Type::LESS;
@@ -350,17 +345,13 @@ namespace ss
 
   auto Scanner::make_number() -> Token
   {
-    while (this->is_digit(this->peek())) {
-      this->advance();
-    }
+    while (this->is_digit(this->peek())) { this->advance(); }
 
     if (!this->is_at_end() && this->peek() == '.' && this->is_digit(this->peek_next())) {
       // advance past the "."
       this->advance();
 
-      while (this->is_digit(this->peek())) {
-        this->advance();
-      }
+      while (this->is_digit(this->peek())) { this->advance(); }
     }
 
     return this->make_token(Token::Type::NUMBER);
@@ -368,9 +359,7 @@ namespace ss
 
   auto Scanner::make_identifier() -> Token
   {
-    while (this->is_alpha(this->peek()) || this->is_digit(this->peek())) {
-      this->advance();
-    }
+    while (this->is_alpha(this->peek()) || this->is_digit(this->peek())) { this->advance(); }
 
     return this->make_token(this->identifier());
   }
@@ -407,6 +396,9 @@ namespace ss
       }
       case 'l': {
         return this->check_keyword(1, 2, "et", Token::Type::LET);
+      }
+      case 'm': {
+        return this->check_keyword(1, 4, "atch", Token::Type::MATCH);
       }
       case 'n': {
         return this->check_keyword(1, 2, "il", Token::Type::NIL);
@@ -493,8 +485,7 @@ namespace ss
         } break;
         case '#': {
           this->advance();
-          while (!this->is_at_end() && this->advance() != '\n') {
-          }
+          while (!this->is_at_end() && this->advance() != '\n') {}
         } break;
         default: {
           done = true;
@@ -519,9 +510,7 @@ namespace ss
   void Parser::parse()
   {
     this->iter = this->tokens.begin();
-    while (this->iter < tokens.end() && this->iter->type != Token::Type::END_OF_FILE) {
-      this->declaration();
-    }
+    while (this->iter < tokens.end() && this->iter->type != Token::Type::END_OF_FILE) { this->declaration(); }
   }
 
   auto Parser::previous() const -> TokenIterator
@@ -611,6 +600,7 @@ namespace ss
       rules[static_cast<std::size_t>(Token::Type::GREATER_EQUAL)] = {nullptr, &Parser::binary_expr, Precedence::COMPARISON};
       rules[static_cast<std::size_t>(Token::Type::LESS)]          = {nullptr, &Parser::binary_expr, Precedence::COMPARISON};
       rules[static_cast<std::size_t>(Token::Type::LESS_EQUAL)]    = {nullptr, &Parser::binary_expr, Precedence::COMPARISON};
+      rules[static_cast<std::size_t>(Token::Type::ARROW)]         = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::IDENTIFIER)]    = {&Parser::make_variable, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::STRING)]        = {&Parser::make_string, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::NUMBER)]        = {&Parser::make_number, nullptr, Precedence::NONE};
@@ -628,6 +618,7 @@ namespace ss
       rules[static_cast<std::size_t>(Token::Type::TRUE)]          = {&Parser::literal_expr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::LET)]           = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::WHILE)]         = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::MATCH)]         = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::ERROR)]         = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::END_OF_FILE)]   = {nullptr, nullptr, Precedence::NONE};
 
@@ -925,6 +916,8 @@ namespace ss
       this->if_stmt();
     } else if (this->advance_if_matches(Token::Type::WHILE)) {
       this->while_stmt();
+    } else if (this->advance_if_matches(Token::Type::MATCH)) {
+      this->match_stmt();
     } else if (this->advance_if_matches(Token::Type::LEFT_BRACE)) {
       this->begin_scope();
       this->block_stmt();
@@ -973,10 +966,7 @@ namespace ss
 
   void Parser::block_stmt()
   {
-    while (!this->check(Token::Type::RIGHT_BRACE) && !this->check(Token::Type::END_OF_FILE)) {
-      this->declaration();
-    }
-
+    while (!this->check(Token::Type::RIGHT_BRACE) && !this->check(Token::Type::END_OF_FILE)) { this->declaration(); }
     this->consume(Token::Type::RIGHT_BRACE, "expect '}' after block");
   }
 
@@ -1068,6 +1058,25 @@ namespace ss
     }
 
     this->end_scope();
+  }
+
+  void Parser::match_stmt()
+  {
+    this->expression();
+    this->consume(Token::Type::LEFT_BRACE, "expect '{' after condition");
+
+    while (!this->check(Token::Type::END_OF_FILE) && !this->check(Token::Type::RIGHT_BRACE)) {
+      this->expression();
+      this->consume(Token::Type::ARROW, "expect '=>' after expression");
+      this->emit_instruction(Instruction{OpCode::CHECK});
+      std::size_t next_jmp = this->emit_jump(Instruction{OpCode::JUMP_IF_FALSE});
+      this->statement();
+      this->patch_jump(next_jmp);
+      this->emit_instruction(Instruction{OpCode::POP});
+    }
+    this->emit_instruction(Instruction{OpCode::POP});
+
+    this->consume(Token::Type::RIGHT_BRACE, "expected '}' after match");
   }
 
   void Compiler::compile(std::string& src, BytecodeChunk& chunk)

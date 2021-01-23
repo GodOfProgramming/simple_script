@@ -1,3 +1,4 @@
+TEST_SCRIPT(
   let v = "hello";
   match v {
     true => {
@@ -6,3 +7,4 @@
 
     "hello" => print "at hello";
   }
+)
