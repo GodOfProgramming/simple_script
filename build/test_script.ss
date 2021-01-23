@@ -1,8 +1,15 @@
-print !(5 - 4 > 3 * 2 == !nil);
+let x = true;
 
-let test;
-let a = "hello";
-let b = " ";
-let c = "world";
-test = a+b+c;
-print test;
+if x {
+  print "true";
+} else {
+  print "false";
+}
+
+x = false;
+
+if x {
+  print "true";
+} else {
+  print "false";
+}
