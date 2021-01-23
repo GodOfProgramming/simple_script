@@ -1246,7 +1246,7 @@ namespace ss
   void Parser::load_stmt()
   {
     if (this->scope_depth != 0) {
-      this->error("can only load files in global scope");
+      this->error(this->iter, "can only load files in global scope");
     }
     this->consume(Token::Type::STRING, "expected file to be string type");
     auto file = this->previous()->lexeme;
@@ -1289,7 +1289,7 @@ namespace ss
   void Parser::loadr_stmt()
   {
     if (this->scope_depth != 0) {
-      this->error("can only load files in global scope");
+      this->error(this->iter, "can only load files in global scope");
     }
     this->consume(Token::Type::STRING, "expected file to be string type");
     auto file = this->previous()->lexeme;
