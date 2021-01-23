@@ -312,7 +312,12 @@ namespace ss
       SS_SIMPLE_PRINT_CASE(TRUE)
       SS_SIMPLE_PRINT_CASE(FALSE)
       SS_SIMPLE_PRINT_CASE(POP)
-      SS_SIMPLE_PRINT_CASE(POP_N)
+      SS_COMPLEX_PRINT_CASE(POP_N, {
+        this->config.write(std::setw(16), std::left, i.major_opcode);
+        this->config.reset_ostream();
+        this->config.write_line(' ', std::setw(4), i.modifying_bits);
+        this->config.reset_ostream();
+      })
       SS_COMPLEX_PRINT_CASE(LOOKUP_LOCAL, {
         auto name = chunk.lookup_local(i.modifying_bits);
         this->config.write(std::setw(16), std::left, i.major_opcode);

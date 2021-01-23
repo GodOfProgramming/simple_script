@@ -370,8 +370,20 @@ namespace ss
       case 'a': {
         return this->check_keyword(1, 2, "nd", Token::Type::AND);
       }
+      case 'b': {
+        return this->check_keyword(1, 4, "reak", Token::Type::BREAK);
+      }
       case 'c': {
-        return this->check_keyword(1, 4, "lass", Token::Type::CLASS);
+        switch (*(this->start + 1)) {
+          case 'l': {
+            return this->check_keyword(2, 3, "ass", Token::Type::CLASS);
+          }
+          case 'o': {
+            return this->check_keyword(2, 6, "ntinue", Token::Type::CONTINUE);
+          }
+          default:
+            return Token::Type::IDENTIFIER;
+        }
       }
       case 'e': {
         return this->check_keyword(1, 3, "lse", Token::Type::ELSE);
@@ -558,13 +570,12 @@ namespace ss
     this->chunk.index_code_mut(jump_loc).modifying_bits = offset;
   }
 
-  void Parser::begin_scope()
+  void Parser::wrap_scope(auto f)
   {
     this->scope_depth++;
-  }
 
-  void Parser::end_scope()
-  {
+    f();
+
     this->scope_depth--;
 
     std::size_t count = 0;
@@ -574,6 +585,15 @@ namespace ss
     }
 
     this->emit_instruction(Instruction{OpCode::POP_N, count});
+  }
+
+  void Parser::wrap_loop(auto f)
+  {
+    auto old_breaks    = std::move(this->breaks);
+    auto old_continues = std::move(this->continues);
+    f();
+    this->breaks    = std::move(old_breaks);
+    this->continues = std::move(old_continues);
   }
 
   auto Parser::rule_for(Token::Type t) const noexcept -> const ParseRule&
@@ -619,9 +639,10 @@ namespace ss
       rules[static_cast<std::size_t>(Token::Type::LET)]           = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::WHILE)]         = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::MATCH)]         = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::BREAK)]         = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::CONTINUE)]      = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::ERROR)]         = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::END_OF_FILE)]   = {nullptr, nullptr, Precedence::NONE};
-
       return rules;
     }();
 
@@ -918,10 +939,12 @@ namespace ss
       this->while_stmt();
     } else if (this->advance_if_matches(Token::Type::MATCH)) {
       this->match_stmt();
+    } else if (this->advance_if_matches(Token::Type::BREAK)) {
+      this->break_stmt();
+    } else if (this->advance_if_matches(Token::Type::CONTINUE)) {
+      this->continue_stmt();
     } else if (this->advance_if_matches(Token::Type::LEFT_BRACE)) {
-      this->begin_scope();
       this->block_stmt();
-      this->end_scope();
     } else {
       this->expression_stmt();
     }
@@ -966,8 +989,10 @@ namespace ss
 
   void Parser::block_stmt()
   {
-    while (!this->check(Token::Type::RIGHT_BRACE) && !this->check(Token::Type::END_OF_FILE)) { this->declaration(); }
-    this->consume(Token::Type::RIGHT_BRACE, "expect '}' after block");
+    this->wrap_scope([&] {
+      while (!this->check(Token::Type::RIGHT_BRACE) && !this->check(Token::Type::END_OF_FILE)) { this->declaration(); }
+      this->consume(Token::Type::RIGHT_BRACE, "expect '}' after block");
+    });
   }
 
   void Parser::if_stmt()
@@ -999,65 +1024,67 @@ namespace ss
 
     std::size_t exit_jmp = this->emit_jump(Instruction{OpCode::JUMP_IF_FALSE});
 
-    this->emit_instruction(Instruction{OpCode::POP});
-    this->block_stmt();
+    this->wrap_loop([&] {
+      this->emit_instruction(Instruction{OpCode::POP});
+      this->block_stmt();
 
-    this->emit_instruction(Instruction{OpCode::LOOP, this->chunk.instruction_count() - loop_start});
+      this->emit_instruction(Instruction{OpCode::LOOP, this->chunk.instruction_count() - loop_start});
+      for (auto loc : this->continues) { this->chunk.index_code_mut(loc).modifying_bits = loc - loop_start; }
 
-    this->patch_jump(exit_jmp);
+      this->patch_jump(exit_jmp);
+      for (auto loc : this->breaks) { this->patch_jump(loc); }
+    });
     this->emit_instruction(Instruction{OpCode::POP});
   }
 
   void Parser::for_stmt()
   {
-    this->begin_scope();
+    this->wrap_scope([&] {
+      if (this->advance_if_matches(Token::Type::SEMICOLON)) {
+        // no initializer
+      } else if (this->advance_if_matches(Token::Type::LET)) {
+        this->let_stmt();
+      } else {
+        this->expression_stmt();
+      }
 
-    if (this->advance_if_matches(Token::Type::SEMICOLON)) {
-      // no initializer
-    } else if (this->advance_if_matches(Token::Type::LET)) {
-      this->let_stmt();
-    } else {
-      this->expression_stmt();
-    }
+      std::size_t loop_start = this->chunk.instruction_count();
 
-    std::size_t loop_start = this->chunk.instruction_count();
+      bool        has_exit = false;
+      std::size_t exit_jmp;
 
-    bool        has_exit = false;
-    std::size_t exit_jmp;
+      if (!this->advance_if_matches(Token::Type::SEMICOLON)) {
+        this->expression();
+        this->consume(Token::Type::SEMICOLON, "expect ';'");
 
-    if (!this->advance_if_matches(Token::Type::SEMICOLON)) {
-      this->expression();
-      this->consume(Token::Type::SEMICOLON, "expect ';'");
+        has_exit = true;
+        exit_jmp = this->emit_jump(Instruction{OpCode::JUMP_IF_FALSE});
+        this->emit_instruction(Instruction{OpCode::POP});
+      }
 
-      has_exit = true;
-      exit_jmp = this->emit_jump(Instruction{OpCode::JUMP_IF_FALSE});
-      this->emit_instruction(Instruction{OpCode::POP});
-    }
+      // TODO consider pushing instructions to a separate vector and sticking them after the block stmt
+      if (!this->advance_if_matches(Token::Type::LEFT_BRACE)) {
+        std::size_t body_jmp = this->emit_jump(Instruction{OpCode::JUMP});
 
-    // TODO consider pushing instructions to a separate vector and sticking them after the block stmt
-    if (!this->advance_if_matches(Token::Type::LEFT_BRACE)) {
-      std::size_t body_jmp = this->emit_jump(Instruction{OpCode::JUMP});
+        std::size_t increment_start = this->chunk.instruction_count();
+        this->expression();
+        this->emit_instruction(Instruction{OpCode::POP});
+        this->consume(Token::Type::LEFT_BRACE, "expect '}' after clauses");
 
-      std::size_t increment_start = this->chunk.instruction_count();
-      this->expression();
-      this->emit_instruction(Instruction{OpCode::POP});
-      this->consume(Token::Type::LEFT_BRACE, "expect '}' after clauses");
+        this->emit_instruction(Instruction{OpCode::LOOP, this->chunk.instruction_count() - loop_start});
+        loop_start = increment_start;
+        this->patch_jump(body_jmp);
+      }
+
+      this->block_stmt();
 
       this->emit_instruction(Instruction{OpCode::LOOP, this->chunk.instruction_count() - loop_start});
-      loop_start = increment_start;
-      this->patch_jump(body_jmp);
-    }
 
-    this->block_stmt();
-
-    this->emit_instruction(Instruction{OpCode::LOOP, this->chunk.instruction_count() - loop_start});
-
-    if (has_exit) {
-      this->patch_jump(exit_jmp);
-      this->emit_instruction(Instruction{OpCode::POP});
-    }
-
-    this->end_scope();
+      if (has_exit) {
+        this->patch_jump(exit_jmp);
+        this->emit_instruction(Instruction{OpCode::POP});
+      }
+    });
   }
 
   void Parser::match_stmt()
@@ -1077,6 +1104,18 @@ namespace ss
     this->emit_instruction(Instruction{OpCode::POP});
 
     this->consume(Token::Type::RIGHT_BRACE, "expected '}' after match");
+  }
+
+  void Parser::break_stmt()
+  {
+    this->consume(Token::Type::SEMICOLON, "expect ';' after break");
+    this->breaks.push_back(this->emit_jump(Instruction{OpCode::JUMP}));
+  }
+
+  void Parser::continue_stmt()
+  {
+    this->consume(Token::Type::SEMICOLON, "expect ';' after continue");
+    this->continues.push_back(this->emit_jump(Instruction{OpCode::LOOP}));
   }
 
   void Compiler::compile(std::string& src, BytecodeChunk& chunk)

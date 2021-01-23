@@ -264,6 +264,8 @@ namespace ss
       TRUE,
       WHILE,
       MATCH,
+      BREAK,
+      CONTINUE,
 
       ERROR,
       END_OF_FILE,
@@ -319,6 +321,8 @@ namespace ss
       SS_ENUM_TO_STR_CASE(Token::Type, TRUE)
       SS_ENUM_TO_STR_CASE(Token::Type, WHILE)
       SS_ENUM_TO_STR_CASE(Token::Type, MATCH)
+      SS_ENUM_TO_STR_CASE(Token::Type, BREAK)
+      SS_ENUM_TO_STR_CASE(Token::Type, CONTINUE)
       SS_ENUM_TO_STR_CASE(Token::Type, ERROR)
       SS_ENUM_TO_STR_CASE(Token::Type, END_OF_FILE)
       SS_ENUM_TO_STR_CASE(Token::Type, LAST)
@@ -584,6 +588,16 @@ namespace ss
      */
     std::size_t scope_depth;
 
+    /**
+     * @brief Jump instructions to link to begining of loop
+     */
+    std::vector<std::size_t> continues;
+
+    /**
+     * @brief Jump instructions to patch after loop end
+     */
+    std::vector<std::size_t> breaks;
+
     void write_instruction(Instruction i);
 
     auto previous() const -> TokenIterator;
@@ -593,8 +607,8 @@ namespace ss
     void emit_instruction(Instruction i);
     auto emit_jump(Instruction i) -> std::size_t;
     void patch_jump(std::size_t jump_loc);
-    void begin_scope();
-    void end_scope();
+    void wrap_scope(auto f);
+    void wrap_loop(auto f);
 
     auto rule_for(Token::Type t) const noexcept -> const ParseRule&;
     void parse_precedence(Precedence p);
@@ -635,6 +649,8 @@ namespace ss
     void while_stmt();
     void for_stmt();
     void match_stmt();
+    void break_stmt();
+    void continue_stmt();
   };
 
   class Compiler

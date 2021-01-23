@@ -1,8 +1,7 @@
-  let v = "hello";
-  match v {
-    true => {
-      print "at all";
-    }
-
-    "hello" => print "at hello";
+let x = 0;
+while x < 5 {
+  x = x + 1;
+  if x > 1 {
+    break;
   }
+}
