@@ -49,11 +49,7 @@ fi
 
 if [ $run -eq 1 ]; then
 	cmd=${build_dir}/SimpleScript
-	if [ ! -z "$1" ]; then
-		${cmd} "$1"
-	else
-		${cmd}
-	fi
+  ${cmd} $@
 fi
 
 if [ $run_tests -eq 1 ]; then

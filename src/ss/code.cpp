@@ -176,6 +176,21 @@ namespace ss
     return this->local_cache[index];
   }
 
+  void BytecodeChunk::set_global(Value::StringType&& name, Value value) noexcept
+  {
+    this->globals[name] = value;
+  }
+
+  auto BytecodeChunk::find_global(Value::StringType name) noexcept -> GlobalMap::iterator
+  {
+    return this->globals.find(name);
+  }
+
+  auto BytecodeChunk::is_global_found(GlobalMap::iterator it) const noexcept -> bool
+  {
+    return it != this->globals.end();
+  }
+
   void BytecodeChunk::print_stack(VMConfig& cfg) const noexcept
   {
     cfg.write("        | ");

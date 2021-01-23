@@ -13,12 +13,12 @@ namespace ss
 
   void VM::set_var(Value::StringType name, Value value) noexcept
   {
-    this->globals[name] = value;
+    this->chunk.set_global(std::move(name), value);
   }
 
   auto VM::get_var(Value::StringType name) noexcept -> Value
   {
-    return this->globals[name];
+    return this->chunk.find_global(name)->second;
   }
 
   auto VM::repl(VMConfig cfg) -> int
@@ -125,8 +125,8 @@ namespace ss
             THROW_RUNTIME_ERROR("invalid type for variable name");
           }
           Value::StringType name = name_value.string();
-          auto              var  = this->globals.find(name);
-          if (var == this->globals.end()) {
+          auto              var  = this->chunk.find_global(name);
+          if (!this->chunk.is_global_found(var)) {
             std::stringstream ss;
             ss << "variable '" << name << "' is undefined";
             THROW_RUNTIME_ERROR(ss.str());
@@ -139,12 +139,13 @@ namespace ss
             THROW_RUNTIME_ERROR("invalid type for variable name");
           }
           Value::StringType name = name_value.string();
-          if (this->globals.find(name) != this->globals.end()) {
+          auto              var  = this->chunk.find_global(name);
+          if (this->chunk.is_global_found(var)) {
             std::stringstream ss;
             ss << "variable '" << name << "' is already defined";
             THROW_RUNTIME_ERROR(ss.str());
           }
-          this->globals.emplace(name, this->chunk.pop_stack());
+          this->chunk.set_global(std::move(name), this->chunk.pop_stack());
         } break;
         case OpCode::ASSIGN_GLOBAL: {
           Value name_value = this->chunk.constant_at(this->ip->modifying_bits);
@@ -152,12 +153,13 @@ namespace ss
             THROW_RUNTIME_ERROR("invalid type for variable name");
           }
           Value::StringType name = name_value.string();
-          if (this->globals.find(name) == this->globals.end()) {
+          auto              var  = this->chunk.find_global(std::move(name));
+          if (!this->chunk.is_global_found(var)) {
             std::stringstream ss;
             ss << "variable '" << name << "' is undefined";
             THROW_RUNTIME_ERROR(ss.str());
           }
-          this->globals[name] = this->chunk.peek_stack();
+          var->second = this->chunk.peek_stack();
         } break;
         case OpCode::EQUAL: {
           Value b = this->chunk.pop_stack();

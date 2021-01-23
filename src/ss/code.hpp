@@ -342,9 +342,10 @@ namespace ss
     using CodeSegment  = std::vector<Instruction>;
     using CodeIterator = CodeSegment::iterator;
 
+    using GlobalMap            = std::unordered_map<Value::StringType, Value>;
+    using LocalCache           = std::unordered_map<std::size_t, std::string>;
     using IdentifierCache      = std::unordered_map<std::string_view, std::size_t>;
     using IdentifierCacheEntry = IdentifierCache::const_iterator;
-    using LocalCache           = std::unordered_map<std::size_t, std::string>;
 
     /**
      * @brief Writes the instruction and tags it with the line
@@ -447,6 +448,12 @@ namespace ss
 
     auto lookup_local(std::size_t index) -> std::string_view;
 
+    void set_global(Value::StringType&& name, Value value) noexcept;
+
+    auto find_global(Value::StringType name) noexcept -> GlobalMap::iterator;
+
+    auto is_global_found(GlobalMap::iterator it) const noexcept -> bool;
+
     auto begin() noexcept -> CodeIterator;
 
     auto end() noexcept -> CodeIterator;
@@ -467,8 +474,9 @@ namespace ss
     std::vector<std::size_t> lines;
     std::size_t              last_line            = 0;
     std::size_t              instructions_on_line = 0;
-    IdentifierCache          identifier_cache;
+    GlobalMap                globals;
     LocalCache               local_cache;
+    IdentifierCache          identifier_cache;
 
     void add_line(std::size_t line) noexcept;
   };

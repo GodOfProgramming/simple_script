@@ -10,8 +10,6 @@ namespace ss
 {
   class VM
   {
-    using GlobalMap = std::unordered_map<Value::StringType, Value>;
-
    public:
     VM(VMConfig cfg = VMConfig::basic);
     ~VM() = default;
@@ -29,7 +27,6 @@ namespace ss
     VMConfig                    config;
     BytecodeChunk               chunk;
     BytecodeChunk::CodeIterator ip;
-    GlobalMap                   globals;
 
     void run_line(std::string line);
     void compile(std::string&& src);
