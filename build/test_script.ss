@@ -1,31 +1,11 @@
-  let x = true;
+let x = false;
 
-  if x {
-    print "true";
-  } else {
-    print "false";
-  }
+let y = true;
 
-  x = false;
+let z = false;
 
-  if x {
-    print "true";
-  } else {
-    print "false";
-  }
-
-  let y = true;
-
-  if x and y {
-    print "and";
-  } else if x {
-    print "x";
-  } else if y {
-    print "y";
-  }
-
-  if x or y {
-    print "or";
-  } else {
-    print "not or";
-  }
+if x or y or z {
+  print "or";
+} else {
+  print "not or";
+}

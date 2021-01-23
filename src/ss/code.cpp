@@ -911,13 +911,7 @@ namespace ss
 
   void Parser::or_expr(bool)
   {
-    // TODO needless overhead here, should have new instruction
-    std::size_t else_jmp = this->emit_jump(Instruction{OpCode::JUMP_IF_FALSE});
-    std::size_t end_jmp  = this->emit_jump(Instruction{OpCode::JUMP});
-
-    this->patch_jump(else_jmp);
-    this->emit_instruction(Instruction{OpCode::POP});
-
+    std::size_t end_jmp = this->emit_jump(Instruction{OpCode::OR});
     this->parse_precedence(Precedence::OR);
     this->patch_jump(end_jmp);
   }

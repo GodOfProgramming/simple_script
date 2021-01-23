@@ -218,6 +218,15 @@ namespace ss
             continue;
           }
         } break;
+        case OpCode::OR: {
+          Value v = this->chunk->peek_stack();
+          if (v.truthy()) {
+            this->ip += this->ip->modifying_bits;
+            continue;
+          } else {
+            this->chunk->pop_stack();
+          }
+        } break;
         case OpCode::RETURN: {
           return;
         } break;
@@ -353,6 +362,12 @@ namespace ss
       })
       SS_COMPLEX_PRINT_CASE(JUMP_IF_FALSE, {
         this->config.write(std::setw(16), std::left, OpCode::JUMP_IF_FALSE);
+        this->config.reset_ostream();
+        this->config.write_line(' ', std::setw(4), i.modifying_bits);
+        this->config.reset_ostream();
+      })
+      SS_COMPLEX_PRINT_CASE(OR, {
+        this->config.write(std::setw(16), std::left, OpCode::OR);
         this->config.reset_ostream();
         this->config.write_line(' ', std::setw(4), i.modifying_bits);
         this->config.reset_ostream();

@@ -136,6 +136,10 @@ namespace ss
      */
     JUMP_IF_FALSE,
     /**
+     * @brief Pops two values off the stack and logically or's them
+     */
+    OR,
+    /**
      * @brief TODO
      */
     RETURN,
@@ -179,6 +183,7 @@ namespace ss
       SS_ENUM_TO_STR_CASE(OpCode, PRINT)
       SS_ENUM_TO_STR_CASE(OpCode, JUMP)
       SS_ENUM_TO_STR_CASE(OpCode, JUMP_IF_FALSE)
+      SS_ENUM_TO_STR_CASE(OpCode, OR)
       SS_ENUM_TO_STR_CASE(OpCode, RETURN)
       default: {
         return "UNKNOWN";
