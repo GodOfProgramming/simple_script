@@ -1,7 +1,14 @@
-let x = 0;
-while x < 5 {
-  x = x + 1;
-  if x > 1 {
+let v = 0;
+loop {
+  if v > 1 {
     break;
+  }
+  v = v + 1;
+  if v >= 0 {
+    let a = "a";
+    if v >= 0 {
+      let b = "b";
+      continue;
+    }
   }
 }

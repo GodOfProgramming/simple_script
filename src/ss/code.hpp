@@ -250,22 +250,23 @@ namespace ss
 
       // Keywords.
       AND,
+      BREAK,
       CLASS,
+      CONTINUE,
       ELSE,
       FALSE,
       FOR,
       FN,
       IF,
       LET,
+      LOOP,
+      MATCH,
       NIL,
       OR,
       PRINT,
       RETURN,
       TRUE,
       WHILE,
-      MATCH,
-      BREAK,
-      CONTINUE,
 
       ERROR,
       END_OF_FILE,
@@ -589,9 +590,19 @@ namespace ss
     std::size_t scope_depth;
 
     /**
-     * @brief Jump instructions to link to begining of loop
+     * @brief True if inside some kind of loop, false otherwise
      */
-    std::vector<std::size_t> continues;
+    bool in_loop;
+
+    /**
+     * @brief Jump instruction to the beginning of the current loop
+     */
+    std::size_t continue_jmp;
+
+    /**
+     * @brief Depth level at beginning of the loop
+     */
+    std::size_t loop_depth;
 
     /**
      * @brief Jump instructions to patch after loop end
@@ -608,7 +619,13 @@ namespace ss
     auto emit_jump(Instruction i) -> std::size_t;
     void patch_jump(std::size_t jump_loc);
     void wrap_scope(auto f);
-    void wrap_loop(auto f);
+    /**
+     * @brief Calls a function after preparing for a loop sequence. Then after the function restors old state
+     *
+     * @param cont_jmp The instruction to jump to from a continue
+     * @param f The function or lambda to call
+     */
+    void wrap_loop(std::size_t cont_jmp, auto f);
 
     auto rule_for(Token::Type t) const noexcept -> const ParseRule&;
     void parse_precedence(Precedence p);
@@ -647,10 +664,11 @@ namespace ss
     void block_stmt();
     void if_stmt();
     void while_stmt();
-    void for_stmt();
-    void match_stmt();
+    void loop_stmt();
     void break_stmt();
     void continue_stmt();
+    void for_stmt();
+    void match_stmt();
   };
 
   class Compiler

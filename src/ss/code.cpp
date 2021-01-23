@@ -407,7 +407,16 @@ namespace ss
         return this->check_keyword(1, 1, "f", Token::Type::IF);
       }
       case 'l': {
-        return this->check_keyword(1, 2, "et", Token::Type::LET);
+        switch (*(this->start + 1)) {
+          case 'e': {
+            return this->check_keyword(2, 1, "t", Token::Type::LET);
+          }
+          case 'o': {
+            return this->check_keyword(2, 2, "op", Token::Type::LOOP);
+          }
+          default:
+            return Token::Type::IDENTIFIER;
+        }
       }
       case 'm': {
         return this->check_keyword(1, 4, "atch", Token::Type::MATCH);
@@ -517,7 +526,7 @@ namespace ss
     return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || c == '@';
   }
 
-  Parser::Parser(TokenList&& t, BytecodeChunk& c) noexcept: tokens(std::move(t)), chunk(c), scope_depth(0) {}
+  Parser::Parser(TokenList&& t, BytecodeChunk& c) noexcept: tokens(std::move(t)), chunk(c), scope_depth(0), in_loop(false) {}
 
   void Parser::parse()
   {
@@ -587,13 +596,22 @@ namespace ss
     this->emit_instruction(Instruction{OpCode::POP_N, count});
   }
 
-  void Parser::wrap_loop(auto f)
+  void Parser::wrap_loop(std::size_t cont_jmp, auto f)
   {
+    auto old_in_loop   = this->in_loop;
+    auto old_depth     = this->loop_depth;
     auto old_breaks    = std::move(this->breaks);
-    auto old_continues = std::move(this->continues);
+    auto old_continue  = this->continue_jmp;
+    this->in_loop      = true;
+    this->continue_jmp = cont_jmp;
+    this->loop_depth   = this->scope_depth;
+
     f();
-    this->breaks    = std::move(old_breaks);
-    this->continues = std::move(old_continues);
+
+    this->in_loop      = old_in_loop;
+    this->loop_depth   = old_depth;
+    this->breaks       = std::move(old_breaks);
+    this->continue_jmp = old_continue;
   }
 
   auto Parser::rule_for(Token::Type t) const noexcept -> const ParseRule&
@@ -625,12 +643,16 @@ namespace ss
       rules[static_cast<std::size_t>(Token::Type::STRING)]        = {&Parser::make_string, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::NUMBER)]        = {&Parser::make_number, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::AND)]           = {nullptr, &Parser::and_expr, Precedence::AND};
+      rules[static_cast<std::size_t>(Token::Type::BREAK)]         = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::CLASS)]         = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::CONTINUE)]      = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::ELSE)]          = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::FALSE)]         = {&Parser::literal_expr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::FOR)]           = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::FN)]            = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::IF)]            = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::LOOP)]          = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::MATCH)]         = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::NIL)]           = {&Parser::literal_expr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::OR)]            = {nullptr, &Parser::or_expr, Precedence::OR};
       rules[static_cast<std::size_t>(Token::Type::PRINT)]         = {nullptr, nullptr, Precedence::NONE};
@@ -638,9 +660,6 @@ namespace ss
       rules[static_cast<std::size_t>(Token::Type::TRUE)]          = {&Parser::literal_expr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::LET)]           = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::WHILE)]         = {nullptr, nullptr, Precedence::NONE};
-      rules[static_cast<std::size_t>(Token::Type::MATCH)]         = {nullptr, nullptr, Precedence::NONE};
-      rules[static_cast<std::size_t>(Token::Type::BREAK)]         = {nullptr, nullptr, Precedence::NONE};
-      rules[static_cast<std::size_t>(Token::Type::CONTINUE)]      = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::ERROR)]         = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::END_OF_FILE)]   = {nullptr, nullptr, Precedence::NONE};
       return rules;
@@ -937,6 +956,8 @@ namespace ss
       this->if_stmt();
     } else if (this->advance_if_matches(Token::Type::WHILE)) {
       this->while_stmt();
+    } else if (this->advance_if_matches(Token::Type::LOOP)) {
+      this->loop_stmt();
     } else if (this->advance_if_matches(Token::Type::MATCH)) {
       this->match_stmt();
     } else if (this->advance_if_matches(Token::Type::BREAK)) {
@@ -1024,17 +1045,57 @@ namespace ss
 
     std::size_t exit_jmp = this->emit_jump(Instruction{OpCode::JUMP_IF_FALSE});
 
-    this->wrap_loop([&] {
-      this->emit_instruction(Instruction{OpCode::POP});
-      this->block_stmt();
-
-      this->emit_instruction(Instruction{OpCode::LOOP, this->chunk.instruction_count() - loop_start});
-      for (auto loc : this->continues) { this->chunk.index_code_mut(loc).modifying_bits = loc - loop_start; }
-
-      this->patch_jump(exit_jmp);
-      for (auto loc : this->breaks) { this->patch_jump(loc); }
-    });
     this->emit_instruction(Instruction{OpCode::POP});
+    this->block_stmt();
+
+    this->emit_instruction(Instruction{OpCode::LOOP, this->chunk.instruction_count() - loop_start});
+
+    this->patch_jump(exit_jmp);
+
+    this->emit_instruction(Instruction{OpCode::POP});
+  }
+
+  void Parser::loop_stmt()
+  {
+    std::size_t loop_start = this->chunk.instruction_count();
+    this->consume(Token::Type::LEFT_BRACE, "expect '{' after loop keyword");
+    this->wrap_loop(loop_start, [&] {
+      this->block_stmt();
+      this->emit_instruction(Instruction{OpCode::LOOP, this->chunk.instruction_count() - loop_start});
+      for (const auto jmp : this->breaks) { this->patch_jump(jmp); }
+    });
+  }
+
+  void Parser::break_stmt()
+  {
+    if (!this->in_loop) {
+      this->error(
+       this->previous(), "continues can only be used within 'loop' constructs, if using a while or for, consider switching");
+    }
+    this->consume(Token::Type::SEMICOLON, "expect ';' after break");
+    std::size_t count = 0;
+    while (!this->locals.empty() && this->locals.back().depth > this->loop_depth) {
+      this->locals.pop_back();
+      count++;
+    }
+    this->emit_instruction(Instruction{OpCode::POP_N, count});
+    this->breaks.push_back(this->emit_jump(Instruction{OpCode::JUMP}));
+  }
+
+  void Parser::continue_stmt()
+  {
+    if (!this->in_loop) {
+      this->error(
+       this->previous(), "continues can only be used within 'loop' constructs, if using a while or for, consider switching");
+    }
+    this->consume(Token::Type::SEMICOLON, "expect ';' after continue");
+    std::size_t count = 0;
+    while (!this->locals.empty() && this->locals.back().depth > this->loop_depth) {
+      this->locals.pop_back();
+      count++;
+    }
+    this->emit_instruction(Instruction{OpCode::POP_N, count});
+    this->emit_instruction(Instruction{OpCode::LOOP, this->chunk.instruction_count() - this->continue_jmp});
   }
 
   void Parser::for_stmt()
@@ -1104,18 +1165,6 @@ namespace ss
     this->emit_instruction(Instruction{OpCode::POP});
 
     this->consume(Token::Type::RIGHT_BRACE, "expected '}' after match");
-  }
-
-  void Parser::break_stmt()
-  {
-    this->consume(Token::Type::SEMICOLON, "expect ';' after break");
-    this->breaks.push_back(this->emit_jump(Instruction{OpCode::JUMP}));
-  }
-
-  void Parser::continue_stmt()
-  {
-    this->consume(Token::Type::SEMICOLON, "expect ';' after continue");
-    this->continues.push_back(this->emit_jump(Instruction{OpCode::LOOP}));
   }
 
   void Compiler::compile(std::string& src, BytecodeChunk& chunk)
