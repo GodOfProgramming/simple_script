@@ -919,10 +919,12 @@ namespace ss
   {
     if (this->advance_if_matches(Token::Type::PRINT)) {
       this->print_stmt();
+    } else if (this->advance_if_matches(Token::Type::FOR)) {
+      this->for_stmt();
     } else if (this->advance_if_matches(Token::Type::IF)) {
       this->if_stmt();
     } else if (this->advance_if_matches(Token::Type::WHILE)) {
-      this->while_statement();
+      this->while_stmt();
     } else if (this->advance_if_matches(Token::Type::LEFT_BRACE)) {
       this->begin_scope();
       this->block_stmt();
@@ -998,7 +1000,7 @@ namespace ss
     this->patch_jump(else_location);
   }
 
-  void Parser::while_statement()
+  void Parser::while_stmt()
   {
     std::size_t loop_start = this->chunk.instruction_count();
 
@@ -1014,6 +1016,58 @@ namespace ss
 
     this->patch_jump(exit_jmp);
     this->emit_instruction(Instruction{OpCode::POP});
+  }
+
+  void Parser::for_stmt()
+  {
+    this->begin_scope();
+
+    if (this->advance_if_matches(Token::Type::SEMICOLON)) {
+      // no initializer
+    } else if (this->advance_if_matches(Token::Type::LET)) {
+      this->let_stmt();
+    } else {
+      this->expression_stmt();
+    }
+
+    std::size_t loop_start = this->chunk.instruction_count();
+
+    bool        has_exit = false;
+    std::size_t exit_jmp;
+
+    if (!this->advance_if_matches(Token::Type::SEMICOLON)) {
+      this->expression();
+      this->consume(Token::Type::SEMICOLON, "expect ';'");
+
+      has_exit = true;
+      exit_jmp = this->emit_jump(Instruction{OpCode::JUMP_IF_FALSE});
+      this->emit_instruction(Instruction{OpCode::POP});
+    }
+
+    // TODO consider pushing instructions to a separate vector and sticking them after the block stmt
+    if (!this->advance_if_matches(Token::Type::LEFT_BRACE)) {
+      std::size_t body_jmp = this->emit_jump(Instruction{OpCode::JUMP});
+
+      std::size_t increment_start = this->chunk.instruction_count();
+      this->expression();
+      this->emit_instruction(Instruction{OpCode::POP});
+      this->consume(Token::Type::LEFT_BRACE, "expect '}' after clauses");
+
+      this->emit_instruction(Instruction{OpCode::LOOP, this->chunk.instruction_count() - loop_start});
+      loop_start = increment_start;
+      this->patch_jump(body_jmp);
+    }
+
+    this->block_stmt();
+
+    this->emit_instruction(Instruction{OpCode::LOOP, this->chunk.instruction_count() - loop_start});
+
+    if (has_exit) {
+      this->patch_jump(exit_jmp);
+      this->emit_instruction(Instruction{OpCode::POP});
+    }
+
+    this->end_scope();
   }
 
   void Compiler::compile(std::string& src, BytecodeChunk& chunk)

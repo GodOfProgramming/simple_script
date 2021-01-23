@@ -96,3 +96,14 @@ TEST_F(TestVM, while_stmt)
 
   EXPECT_EQ(this->ostream->str(), "0\n1\n2\n");
 }
+
+TEST_F(TestVM, for_stmt)
+{
+  const char* script = {
+#include "scripts/for_script.ss"
+  };
+
+  this->vm->run_script(script);
+
+  EXPECT_EQ(this->ostream->str(), "0\n1\n2\n");
+}

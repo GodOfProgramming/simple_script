@@ -624,7 +624,8 @@ namespace ss
     void let_stmt();
     void block_stmt();
     void if_stmt();
-    void while_statement();
+    void while_stmt();
+    void for_stmt();
   };
 
   class Compiler
