@@ -504,6 +504,25 @@ namespace ss
       PRIMARY,
     };
 
+    constexpr auto to_string(Precedence p) noexcept -> const char*
+    {
+      switch (p) {
+        SS_ENUM_TO_STR_CASE(Precedence, NONE)
+        SS_ENUM_TO_STR_CASE(Precedence, ASSIGNMENT)
+        SS_ENUM_TO_STR_CASE(Precedence, OR)
+        SS_ENUM_TO_STR_CASE(Precedence, AND)
+        SS_ENUM_TO_STR_CASE(Precedence, EQUALITY)
+        SS_ENUM_TO_STR_CASE(Precedence, COMPARISON)
+        SS_ENUM_TO_STR_CASE(Precedence, TERM)
+        SS_ENUM_TO_STR_CASE(Precedence, FACTOR)
+        SS_ENUM_TO_STR_CASE(Precedence, UNARY)
+        SS_ENUM_TO_STR_CASE(Precedence, CALL)
+        SS_ENUM_TO_STR_CASE(Precedence, PRIMARY)
+        default: {
+          return "UNKNOWN";
+        }
+      };
+    }
     using ParseFn = std::function<void(Parser*, bool)>;
 
     struct ParseRule
@@ -575,19 +594,20 @@ namespace ss
     auto resolve_local(TokenIterator token) const -> VarLookup;
 
     void expression();
-    void grouping(bool can_assign);
-    void unary(bool can_assign);
-    void binary(bool can_assign);
-    void literal(bool can_assign);
+    void grouping_expr(bool can_assign);
+    void unary_expr(bool can_assign);
+    void binary_expr(bool can_assign);
+    void literal_expr(bool can_assign);
+    void and_expr(bool can_assign);
 
     void declaration();
 
     void statement();
-    void print_statement();
-    void expression_statement();
-    void let_statement();
-    void block_statement();
-    void if_statement();
+    void print_stmt();
+    void expression_stmt();
+    void let_stmt();
+    void block_stmt();
+    void if_stmt();
   };
 
   class Compiler

@@ -591,41 +591,41 @@ namespace ss
   {
     static const std::array<ParseRule, static_cast<std::size_t>(Token::Type::LAST)> rules = [this] {
       std::array<ParseRule, static_cast<std::size_t>(Token::Type::LAST)> rules{};
-      rules[static_cast<std::size_t>(Token::Type::LEFT_PAREN)]    = {&Parser::grouping, nullptr, Precedence::NONE};
-      rules[static_cast<std::size_t>(Token::Type::RIGHT_PAREN)]   = {nullptr, nullptr, Precedence::NONE};
-      rules[static_cast<std::size_t>(Token::Type::LEFT_BRACE)]    = {nullptr, nullptr, Precedence::NONE};
-      rules[static_cast<std::size_t>(Token::Type::RIGHT_BRACE)]   = {nullptr, nullptr, Precedence::NONE};
-      rules[static_cast<std::size_t>(Token::Type::COMMA)]         = {nullptr, nullptr, Precedence::NONE};
-      rules[static_cast<std::size_t>(Token::Type::DOT)]           = {nullptr, nullptr, Precedence::NONE};
-      rules[static_cast<std::size_t>(Token::Type::SEMICOLON)]     = {nullptr, nullptr, Precedence::NONE};
-      rules[static_cast<std::size_t>(Token::Type::PLUS)]          = {nullptr, &Parser::binary, Precedence::TERM};
-      rules[static_cast<std::size_t>(Token::Type::MINUS)]         = {&Parser::unary, &Parser::binary, Precedence::TERM};
-      rules[static_cast<std::size_t>(Token::Type::STAR)]          = {nullptr, &Parser::binary, Precedence::FACTOR};
-      rules[static_cast<std::size_t>(Token::Type::SLASH)]         = {nullptr, &Parser::binary, Precedence::FACTOR};
-      rules[static_cast<std::size_t>(Token::Type::MODULUS)]       = {nullptr, &Parser::binary, Precedence::FACTOR};
-      rules[static_cast<std::size_t>(Token::Type::BANG)]          = {&Parser::unary, nullptr, Precedence::NONE};
-      rules[static_cast<std::size_t>(Token::Type::BANG_EQUAL)]    = {nullptr, &Parser::binary, Precedence::EQUALITY};
-      rules[static_cast<std::size_t>(Token::Type::EQUAL)]         = {nullptr, nullptr, Precedence::NONE};
-      rules[static_cast<std::size_t>(Token::Type::EQUAL_EQUAL)]   = {nullptr, &Parser::binary, Precedence::EQUALITY};
-      rules[static_cast<std::size_t>(Token::Type::GREATER)]       = {nullptr, &Parser::binary, Precedence::COMPARISON};
-      rules[static_cast<std::size_t>(Token::Type::GREATER_EQUAL)] = {nullptr, &Parser::binary, Precedence::COMPARISON};
-      rules[static_cast<std::size_t>(Token::Type::LESS)]          = {nullptr, &Parser::binary, Precedence::COMPARISON};
-      rules[static_cast<std::size_t>(Token::Type::LESS_EQUAL)]    = {nullptr, &Parser::binary, Precedence::COMPARISON};
+      rules[static_cast<std::size_t>(Token::Type::LEFT_PAREN)]  = {&Parser::grouping_expr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::RIGHT_PAREN)] = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::LEFT_BRACE)]  = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::RIGHT_BRACE)] = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::COMMA)]       = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::DOT)]         = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::SEMICOLON)]   = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::PLUS)]        = {nullptr, &Parser::binary_expr, Precedence::TERM};
+      rules[static_cast<std::size_t>(Token::Type::MINUS)]       = {&Parser::unary_expr, &Parser::binary_expr, Precedence::TERM};
+      rules[static_cast<std::size_t>(Token::Type::STAR)]        = {nullptr, &Parser::binary_expr, Precedence::FACTOR};
+      rules[static_cast<std::size_t>(Token::Type::SLASH)]       = {nullptr, &Parser::binary_expr, Precedence::FACTOR};
+      rules[static_cast<std::size_t>(Token::Type::MODULUS)]     = {nullptr, &Parser::binary_expr, Precedence::FACTOR};
+      rules[static_cast<std::size_t>(Token::Type::BANG)]        = {&Parser::unary_expr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::BANG_EQUAL)]  = {nullptr, &Parser::binary_expr, Precedence::EQUALITY};
+      rules[static_cast<std::size_t>(Token::Type::EQUAL)]       = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::EQUAL_EQUAL)] = {nullptr, &Parser::binary_expr, Precedence::EQUALITY};
+      rules[static_cast<std::size_t>(Token::Type::GREATER)]     = {nullptr, &Parser::binary_expr, Precedence::COMPARISON};
+      rules[static_cast<std::size_t>(Token::Type::GREATER_EQUAL)] = {nullptr, &Parser::binary_expr, Precedence::COMPARISON};
+      rules[static_cast<std::size_t>(Token::Type::LESS)]          = {nullptr, &Parser::binary_expr, Precedence::COMPARISON};
+      rules[static_cast<std::size_t>(Token::Type::LESS_EQUAL)]    = {nullptr, &Parser::binary_expr, Precedence::COMPARISON};
       rules[static_cast<std::size_t>(Token::Type::IDENTIFIER)]    = {&Parser::make_variable, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::STRING)]        = {&Parser::make_string, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::NUMBER)]        = {&Parser::make_number, nullptr, Precedence::NONE};
-      rules[static_cast<std::size_t>(Token::Type::AND)]           = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::AND)]           = {nullptr, &Parser::and_expr, Precedence::AND};
       rules[static_cast<std::size_t>(Token::Type::CLASS)]         = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::ELSE)]          = {nullptr, nullptr, Precedence::NONE};
-      rules[static_cast<std::size_t>(Token::Type::FALSE)]         = {&Parser::literal, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::FALSE)]         = {&Parser::literal_expr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::FOR)]           = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::FN)]            = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::IF)]            = {nullptr, nullptr, Precedence::NONE};
-      rules[static_cast<std::size_t>(Token::Type::NIL)]           = {&Parser::literal, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::NIL)]           = {&Parser::literal_expr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::OR)]            = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::PRINT)]         = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::RETURN)]        = {nullptr, nullptr, Precedence::NONE};
-      rules[static_cast<std::size_t>(Token::Type::TRUE)]          = {&Parser::literal, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::TRUE)]          = {&Parser::literal_expr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::LET)]           = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::WHILE)]         = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::ERROR)]         = {nullptr, nullptr, Precedence::NONE};
@@ -814,13 +814,13 @@ namespace ss
     this->parse_precedence(Precedence::ASSIGNMENT);
   }
 
-  void Parser::grouping(bool)
+  void Parser::grouping_expr(bool)
   {
     this->expression();
     this->consume(Token::Type::RIGHT_PAREN, "expect ')' after expression");
   }
 
-  void Parser::unary(bool)
+  void Parser::unary_expr(bool)
   {
     Token::Type operator_type = this->previous()->type;
 
@@ -838,7 +838,7 @@ namespace ss
     }
   }
 
-  void Parser::binary(bool)
+  void Parser::binary_expr(bool)
   {
     Token::Type operator_type = this->previous()->type;
 
@@ -884,7 +884,7 @@ namespace ss
     }
   }
 
-  void Parser::literal(bool)
+  void Parser::literal_expr(bool)
   {
     switch (this->previous()->type) {
       case Token::Type::NIL: {
@@ -901,45 +901,53 @@ namespace ss
     }
   }
 
+  void Parser::and_expr(bool)
+  {
+    std::size_t end_jmp = this->emit_jump(Instruction{OpCode::JUMP_IF_FALSE});
+    this->emit_instruction(Instruction{OpCode::POP});
+    this->parse_precedence(Precedence::AND);
+    this->patch_jump(end_jmp);
+  }
+
   void Parser::statement()
   {
     if (this->advance_if_matches(Token::Type::PRINT)) {
-      this->print_statement();
+      this->print_stmt();
     } else if (this->advance_if_matches(Token::Type::IF)) {
-      this->if_statement();
+      this->if_stmt();
     } else if (this->advance_if_matches(Token::Type::LEFT_BRACE)) {
       this->begin_scope();
-      this->block_statement();
+      this->block_stmt();
       this->end_scope();
     } else {
-      this->expression_statement();
+      this->expression_stmt();
     }
   }
 
   void Parser::declaration()
   {
     if (this->advance_if_matches(Token::Type::LET)) {
-      this->let_statement();
+      this->let_stmt();
     } else {
       this->statement();
     }
   }
 
-  void Parser::print_statement()
+  void Parser::print_stmt()
   {
     this->expression();
     this->consume(Token::Type::SEMICOLON, "expected ';' after value");
     this->emit_instruction(Instruction{OpCode::PRINT});
   }
 
-  void Parser::expression_statement()
+  void Parser::expression_stmt()
   {
     this->expression();
     this->consume(Token::Type::SEMICOLON, "expected ';' after value");
     this->emit_instruction(Instruction{OpCode::POP});
   }
 
-  void Parser::let_statement()
+  void Parser::let_stmt()
   {
     std::size_t global = this->parse_variable("expect variable name");
 
@@ -953,7 +961,7 @@ namespace ss
     this->define_variable(global);
   }
 
-  void Parser::block_statement()
+  void Parser::block_stmt()
   {
     while (!this->check(Token::Type::RIGHT_BRACE) && !this->check(Token::Type::END_OF_FILE)) {
       this->declaration();
@@ -962,22 +970,21 @@ namespace ss
     this->consume(Token::Type::RIGHT_BRACE, "expect '}' after block");
   }
 
-  void Parser::if_statement()
+  void Parser::if_stmt()
   {
     this->expression();
     this->consume(Token::Type::LEFT_BRACE, "expect '{' after condition");
 
     std::size_t jump_location = this->emit_jump(Instruction{OpCode::JUMP_IF_FALSE});
     this->emit_instruction(Instruction{OpCode::POP});
-    this->block_statement();
+    this->block_stmt();
 
     std::size_t else_location = this->emit_jump(Instruction{OpCode::JUMP});
     this->patch_jump(jump_location);
     this->emit_instruction(Instruction{OpCode::POP});
 
     if (this->advance_if_matches(Token::Type::ELSE)) {
-      this->consume(Token::Type::LEFT_BRACE, "expect '{' after condition");
-      this->block_statement();
+      this->statement();
     }
 
     this->patch_jump(else_location);
