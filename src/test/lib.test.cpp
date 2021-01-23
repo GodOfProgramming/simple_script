@@ -118,3 +118,25 @@ TEST_F(TestVM, match_stmt)
 
   EXPECT_EQ(this->ostream->str(), "at hello\n");
 }
+
+TEST_F(TestVM, breaks_continues)
+{
+  const char* script = {
+#include "scripts/break_continue_script.ss"
+  };
+
+  this->vm->run_script(script);
+
+  EXPECT_EQ(this->ostream->str(), "0\n1\n2\n3\n4\n");
+}
+
+TEST_F(TestVM, loops)
+{
+  const char* script = {
+#include "scripts/loop_script.ss"
+  };
+
+  this->vm->run_script(script);
+
+  EXPECT_EQ(this->ostream->str(), "0\n1\n2\n3\n4\n");
+}

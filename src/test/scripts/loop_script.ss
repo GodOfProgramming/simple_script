@@ -1,8 +1,10 @@
+TEST_SCRIPT(
   let v = 0;
   loop {
-    v = v + 1;
     if v > 4 {
       break;
     }
     print v;
+    v = v + 1;
   }
+)
