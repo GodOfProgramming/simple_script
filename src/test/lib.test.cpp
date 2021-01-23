@@ -77,5 +77,5 @@ TEST_F(TestVM, if_else_statements)
 
   this->vm->run_script(script);
 
-  EXPECT_EQ(this->ostream->str(), "true\nfalse\ny\n");
+  EXPECT_EQ(this->ostream->str(), "true\nfalse\ny\nor\n");
 }

@@ -594,11 +594,12 @@ namespace ss
     auto resolve_local(TokenIterator token) const -> VarLookup;
 
     void expression();
-    void grouping_expr(bool can_assign);
-    void unary_expr(bool can_assign);
-    void binary_expr(bool can_assign);
-    void literal_expr(bool can_assign);
-    void and_expr(bool can_assign);
+    void grouping_expr(bool);
+    void unary_expr(bool);
+    void binary_expr(bool);
+    void literal_expr(bool);
+    void and_expr(bool);
+    void or_expr(bool);
 
     void declaration();
 

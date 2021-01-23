@@ -17,9 +17,15 @@
   let y = true;
 
   if x and y {
-    print "same";
+    print "and";
   } else if x {
     print "x";
   } else if y {
     print "y";
+  }
+
+  if x or y {
+    print "or";
+  } else {
+    print "not or";
   }

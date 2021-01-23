@@ -622,7 +622,7 @@ namespace ss
       rules[static_cast<std::size_t>(Token::Type::FN)]            = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::IF)]            = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::NIL)]           = {&Parser::literal_expr, nullptr, Precedence::NONE};
-      rules[static_cast<std::size_t>(Token::Type::OR)]            = {nullptr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::OR)]            = {nullptr, &Parser::or_expr, Precedence::OR};
       rules[static_cast<std::size_t>(Token::Type::PRINT)]         = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::RETURN)]        = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::TRUE)]          = {&Parser::literal_expr, nullptr, Precedence::NONE};
@@ -906,6 +906,19 @@ namespace ss
     std::size_t end_jmp = this->emit_jump(Instruction{OpCode::JUMP_IF_FALSE});
     this->emit_instruction(Instruction{OpCode::POP});
     this->parse_precedence(Precedence::AND);
+    this->patch_jump(end_jmp);
+  }
+
+  void Parser::or_expr(bool)
+  {
+    // TODO needless overhead here, should have new instruction
+    std::size_t else_jmp = this->emit_jump(Instruction{OpCode::JUMP_IF_FALSE});
+    std::size_t end_jmp  = this->emit_jump(Instruction{OpCode::JUMP});
+
+    this->patch_jump(else_jmp);
+    this->emit_instruction(Instruction{OpCode::POP});
+
+    this->parse_precedence(Precedence::OR);
     this->patch_jump(end_jmp);
   }
 
