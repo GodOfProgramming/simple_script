@@ -3,9 +3,10 @@
 #include "cfg.hpp"
 #include "code.hpp"
 #include "datatypes.hpp"
+
 #include <cinttypes>
-#include <unordered_map>
 #include <filesystem>
+#include <unordered_map>
 
 namespace ss
 {
@@ -26,10 +27,10 @@ namespace ss
     void test();
 
    private:
-    VMConfig                    config;
-    BytecodeChunk               chunk;
+    VMConfig config;
+    BytecodeChunk chunk;
     BytecodeChunk::CodeIterator ip;
-    std::size_t                 sp;
+    std::size_t sp;
 
     void run_line(std::string line);
     void compile(std::string filename, std::string&& src);

@@ -4,11 +4,11 @@ BasedOnStyle: LLVM
 AccessModifierOffset: -1
 AlignAfterOpenBracket: AlwaysBreak
 AlignConsecutiveAssignments: true
-# AlignConsecutiveBitFields: true # true is invalid
-AlignConsecutiveDeclarations: true
+AlignConsecutiveBitFields: true
+AlignConsecutiveDeclarations: false
 AlignConsecutiveMacros: true
 AlignEscapedNewlines: Right
-AlignOperands: true
+AlignOperands: AlignAfterOperator
 AlignTrailingComments: true
 AllowAllParametersOfDeclarationOnNextLine: true
 AllowAllConstructorInitializersOnNextLine: true
@@ -44,14 +44,13 @@ BreakBeforeBinaryOperators: None
 BreakBeforeBraces: Custom
 BreakBeforeInheritanceComma: false
 BreakBeforeTernaryOperators: true
-BreakConstructorInitializersBeforeComma: true
 BreakConstructorInitializers: BeforeComma
 BreakAfterJavaFieldAnnotations: false
 BreakStringLiterals: true
 ColumnLimit: 128
 CommentPragmas: "^ IWYU pragma:"
 CompactNamespaces: false
-ConstructorInitializerAllOnOneLineOrOnePerLine: true
+ConstructorInitializerAllOnOneLineOrOnePerLine: false
 ConstructorInitializerIndentWidth: 1
 ContinuationIndentWidth: 1
 Cpp11BracedListStyle: true
@@ -62,17 +61,22 @@ FixNamespaceComments: true
 ForEachMacros:
   - Q_FOREACH
   - BOOST_FOREACH
-IncludeBlocks: Preserve
+SortIncludes: true
+IncludeBlocks: Regroup
 IncludeCategories:
-  - Regex: '^<ext/.*\.h>'
-    Priority: 2
-  - Regex: '^<.*\.h>'
-    Priority: 1
-  - Regex: "^<.*"
-    Priority: 2
-  - Regex: ".*"
+  # Headers in <> without extension.
+  - Regex: '<([A-Za-z0-9\Q/-_\E])+>'
+    Priority: 4
+  # Headers in <> from specific external libraries.
+  - Regex: '<(.+)\/'
     Priority: 3
-IncludeIsMainRegex: "([-_](test|unittest))?$"
+  # Headers in <> with extension.
+  - Regex: '<([A-Za-z0-9.\Q/-_\E])+>'
+    Priority: 2
+  # Headers in "" with extension.
+  - Regex: '"([A-Za-z0-9.\Q/-_\E])+"'
+    Priority: 1
+IncludeIsMainRegex: "([-.](test))?$"
 IndentCaseLabels: true
 IndentPPDirectives: None
 IndentWidth: 2
@@ -96,7 +100,6 @@ PenaltyExcessCharacter: 1000000
 PenaltyReturnTypeOnItsOwnLine: 200
 PointerAlignment: Left
 ReflowComments: true
-SortIncludes: false
 SortUsingDeclarations: true
 SpaceAfterCStyleCast: false
 SpaceAfterTemplateKeyword: true

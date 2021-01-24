@@ -5,9 +5,9 @@
 #include "util.hpp"
 
 #include <cstring>
+#include <filesystem>
 #include <iostream>
 #include <sstream>
-#include <filesystem>
 
 namespace ss
 {
@@ -225,7 +225,11 @@ namespace ss
     for (const auto& pair : this->local_cache) { cfg.write_line(pair.first, "=", pair.second); }
   }
 
-  Scanner::Scanner(std::string&& src) noexcept: source(std::move(src)), current_char(this->source.begin()), line(1), column(1)
+  Scanner::Scanner(std::string&& src) noexcept
+   : source(std::move(src))
+   , current_char(this->source.begin())
+   , line(1)
+   , column(1)
   {}
 
   auto Scanner::scan() -> std::vector<Token>
@@ -279,7 +283,8 @@ namespace ss
         } break;
         case '=': {
           t = this->advance_if_match('=') ? Token::Type::EQUAL_EQUAL
-                                          : this->advance_if_match('>') ? Token::Type::ARROW : Token::Type::EQUAL;
+            : this->advance_if_match('>') ? Token::Type::ARROW
+                                          : Token::Type::EQUAL;
         } break;
         case '<': {
           t = this->advance_if_match('=') ? Token::Type::LESS_EQUAL : Token::Type::LESS;
@@ -569,7 +574,12 @@ namespace ss
   }
 
   Parser::Parser(TokenList&& t, BytecodeChunk& c, std::string cf) noexcept
-   : tokens(std::move(t)), iter(this->tokens.begin()), chunk(c), current_file(cf), scope_depth(0), in_loop(false)
+   : tokens(std::move(t))
+   , iter(this->tokens.begin())
+   , chunk(c)
+   , current_file(cf)
+   , scope_depth(0)
+   , in_loop(false)
   {}
 
   void Parser::parse()
@@ -783,7 +793,7 @@ namespace ss
   {
     auto lookup = this->resolve_local(name);
 
-    OpCode      get, set;
+    OpCode get, set;
     std::size_t index;
     if (lookup.type == VarLookup::Type::LOCAL) {
       get   = OpCode::LOOKUP_LOCAL;
@@ -1173,7 +1183,7 @@ namespace ss
 
       std::size_t loop_start = this->chunk.instruction_count();
 
-      bool        has_exit = false;
+      bool has_exit = false;
       std::size_t exit_jmp;
 
       if (!this->advance_if_matches(Token::Type::SEMICOLON)) {
@@ -1286,7 +1296,7 @@ namespace ss
     }
 
     std::istringstream iss(dirs);
-    std::string        line;
+    std::string line;
     while (std::getline(iss, line, ':')) {
       std::stringstream ss;
       ss << line << '/' << file;
@@ -1314,7 +1324,7 @@ namespace ss
     auto file = this->previous()->lexeme;
     this->consume(Token::Type::SEMICOLON, "expected ';' after load stmt");
     std::filesystem::path path = this->current_file;
-    std::stringstream     ss;
+    std::stringstream ss;
     ss << path.parent_path().string() << '/' << file;
     path = ss.str();
 

@@ -2,10 +2,11 @@
 
 #include "cfg.hpp"
 #include "datatypes.hpp"
+
 #include <cinttypes>
+#include <functional>
 #include <string>
 #include <vector>
-#include <functional>
 
 /**
  * @brief Case statement for any to_string() enum function
@@ -275,10 +276,10 @@ namespace ss
       LAST,
     };
 
-    Type             type;
+    Type type;
     std::string_view lexeme;
-    std::size_t      line;
-    std::size_t      column;
+    std::size_t line;
+    std::size_t column;
 
     auto operator==(const Token& other) const noexcept -> bool;
   };
@@ -478,15 +479,15 @@ namespace ss
     void print_local_map(VMConfig& cfg) const noexcept;
 
    private:
-    CodeSegment              code;
-    std::vector<Value>       constants;
-    std::vector<Value>       stack;
+    CodeSegment code;
+    std::vector<Value> constants;
+    std::vector<Value> stack;
     std::vector<std::size_t> lines;
-    std::size_t              last_line            = 0;
-    std::size_t              instructions_on_line = 0;
-    GlobalMap                globals;
-    LocalCache               local_cache;
-    IdentifierCache          identifier_cache;
+    std::size_t last_line            = 0;
+    std::size_t instructions_on_line = 0;
+    GlobalMap globals;
+    LocalCache local_cache;
+    IdentifierCache identifier_cache;
 
     void add_line(std::size_t line) noexcept;
   };
@@ -500,11 +501,11 @@ namespace ss
     auto scan() -> std::vector<Token>;
 
    private:
-    std::string&&         source;
+    std::string&& source;
     std::string::iterator starting_char;
     std::string::iterator current_char;
-    std::size_t           line;
-    std::size_t           column;
+    std::size_t line;
+    std::size_t column;
 
     void error(std::string msg) const;
     auto make_token(Token::Type t) const noexcept -> Token;
@@ -525,9 +526,9 @@ namespace ss
 
   struct Local
   {
-    Token       name;
+    Token name;
     std::size_t depth;
-    bool        initialized;
+    bool initialized;
   };
 
   class Parser
@@ -573,8 +574,8 @@ namespace ss
 
     struct ParseRule
     {
-      ParseFn    prefix;
-      ParseFn    infix;
+      ParseFn prefix;
+      ParseFn infix;
       Precedence precedence;
     };
 
@@ -586,7 +587,7 @@ namespace ss
         GLOBAL,
       };
 
-      Type        type;
+      Type type;
       std::size_t index;
     };
 
@@ -602,10 +603,10 @@ namespace ss
     void parse();
 
    private:
-    TokenList          tokens;
-    TokenIterator      iter;
-    BytecodeChunk&     chunk;
-    std::string        current_file;
+    TokenList tokens;
+    TokenIterator iter;
+    BytecodeChunk& chunk;
+    std::string current_file;
     std::vector<Local> locals;
 
     /**

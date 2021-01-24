@@ -1,5 +1,7 @@
-#include "helpers.hpp"
 #include "ss/lib.hpp"
+
+#include "helpers.hpp"
+
 #include <gtest/gtest.h>
 
 #define TEST_SCRIPT(src) #src
@@ -20,7 +22,7 @@ class TestVM: public testing::Test
 
  protected:
   std::shared_ptr<std::ostringstream> ostream;
-  std::shared_ptr<VM>                 vm;
+  std::shared_ptr<VM> vm;
 };
 
 TEST_F(TestVM, prints_correctly)

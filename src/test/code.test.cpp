@@ -1,5 +1,7 @@
-#include "helpers.hpp"
 #include "ss/code.hpp"
+
+#include "helpers.hpp"
+
 #include <gtest/gtest.h>
 
 using ss::BytecodeChunk;
@@ -174,7 +176,7 @@ using ss::Parser;
 TEST(Parser, METHOD(parse, some_math))
 {
   std::string src = "!(5 - 4 > 3 * 2 == !nil);";
-  Scanner     scanner(std::move(src));
+  Scanner scanner(std::move(src));
 
   auto tokens = scanner.scan();
 
