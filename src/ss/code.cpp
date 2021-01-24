@@ -1,7 +1,6 @@
 #include "code.hpp"
 
 #include "datatypes.hpp"
-#include "exceptions.hpp"
 #include "util.hpp"
 
 #include <cstring>
@@ -145,17 +144,17 @@ namespace ss
     return this->code.size();
   }
 
-  auto BytecodeChunk::index_code_mut(std::size_t index) -> Instruction&
+  auto BytecodeChunk::index_code_mut(std::size_t index) -> InstructionIterator
   {
-    return this->code[index];
+    return this->code.begin() + index;
   }
 
-  auto BytecodeChunk::begin() noexcept -> CodeIterator
+  auto BytecodeChunk::begin() noexcept -> InstructionIterator
   {
     return this->code.begin();
   }
 
-  auto BytecodeChunk::end() noexcept -> CodeIterator
+  auto BytecodeChunk::end() noexcept -> InstructionIterator
   {
     return this->code.end();
   }
@@ -301,9 +300,7 @@ namespace ss
           } else if (this->is_alpha(c)) {
             t = Token::Type::IDENTIFIER;
           } else {
-            std::stringstream ss;
-            ss << "invalid character '" << *this->starting_char << '\'';
-            this->error(ss.str());
+            this->error("invalid character '", *this->starting_char, '\'');
           }
         }
       }
@@ -333,13 +330,6 @@ namespace ss
     tokens.push_back(this->make_token(Token::Type::END_OF_FILE));
 
     return tokens;
-  }
-
-  void Scanner::error(std::string msg) const
-  {
-    std::stringstream ss;
-    ss << this->line << ":" << this->column << " -> " << msg;
-    THROW_COMPILETIME_ERROR(ss.str());
   }
 
   auto Scanner::make_token(Token::Type t) const noexcept -> Token
@@ -606,13 +596,6 @@ namespace ss
     }
   }
 
-  void Parser::error(TokenIterator tok, std::string msg) const
-  {
-    std::stringstream ss;
-    ss << tok->line << ":" << tok->column << " -> " << msg;
-    THROW_COMPILETIME_ERROR(ss.str());
-  }
-
   void Parser::emit_instruction(Instruction i)
   {
     this->chunk.write(i, this->previous()->line);
@@ -629,7 +612,7 @@ namespace ss
   {
     std::size_t offset = this->chunk.instruction_count() - jump_loc;
 
-    this->chunk.index_code_mut(jump_loc).modifying_bits = offset;
+    this->chunk.index_code_mut(jump_loc)->modifying_bits = offset;
   }
 
   void Parser::wrap_scope(auto f)
@@ -667,11 +650,20 @@ namespace ss
     this->continue_jmp = old_continue;
   }
 
+  void Parser::wrap_call_frame(auto f)
+  {
+    std::vector<Local> old_locals = std::move(this->locals);
+    this->locals.push_back(Local{});  // return addr
+    this->wrap_scope(f);
+    this->locals = std::move(old_locals);
+    this->emit_instruction(Instruction{OpCode::RETURN});
+  }
+
   auto Parser::rule_for(Token::Type t) const noexcept -> const ParseRule&
   {
     static const std::array<ParseRule, static_cast<std::size_t>(Token::Type::LAST)> rules = [this] {
       std::array<ParseRule, static_cast<std::size_t>(Token::Type::LAST)> rules{};
-      rules[static_cast<std::size_t>(Token::Type::LEFT_PAREN)]  = {&Parser::grouping_expr, nullptr, Precedence::NONE};
+      rules[static_cast<std::size_t>(Token::Type::LEFT_PAREN)] = {&Parser::grouping_expr, &Parser::call_expr, Precedence::CALL};
       rules[static_cast<std::size_t>(Token::Type::RIGHT_PAREN)] = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::LEFT_BRACE)]  = {nullptr, nullptr, Precedence::NONE};
       rules[static_cast<std::size_t>(Token::Type::RIGHT_BRACE)] = {nullptr, nullptr, Precedence::NONE};
@@ -774,19 +766,27 @@ namespace ss
     this->named_variable(this->previous(), can_assign);
   }
 
-  void Parser::make_function(FnType type)
+  void Parser::make_function(std::string name)
   {
-    (void)type;
-    // TODO figure out how to order function code better
-    auto after = this->emit_jump(Instruction{OpCode::JUMP});
-    this->wrap_scope([&] {
+    auto decl_line     = this->previous()->line;
+    auto end_jmp       = this->emit_jump(Instruction{OpCode::JUMP});
+    std::size_t airity = 0;
+    this->wrap_call_frame([&] {
       this->consume(Token::Type::LEFT_PAREN, "expect '(' after function name");
+      if (!this->check(Token::Type::RIGHT_PAREN)) {
+        do {
+          airity++;
+          auto param_const = this->parse_variable("expected parameter name");
+          this->define_variable(param_const);
+        } while (this->advance_if_matches(Token::Type::COMMA));
+      }
       this->consume(Token::Type::RIGHT_PAREN, "expect ')' after parameters");
       this->consume(Token::Type::LEFT_BRACE, "expect '{' before function body");
 
       this->block_stmt();
     });
-    this->patch_jump(after);
+    this->patch_jump(end_jmp);
+    this->chunk.write_constant(Value{std::make_shared<ScriptFunction>(name, 0, end_jmp + 1)}, decl_line);
   }
 
   void Parser::named_variable(TokenIterator name, bool can_assign)
@@ -805,9 +805,7 @@ namespace ss
       index = this->identifier_constant(name);
     } else {
       // impossible for now
-      std::stringstream ss;
-      ss << "invalid lookup type for var '" << name->lexeme << "'";
-      THROW_RUNTIME_ERROR(ss.str());
+      this->error(name, "invalid lookup type for var '", name->lexeme, "'");
     }
 
     if (can_assign && this->advance_if_matches(Token::Type::EQUAL)) {
@@ -823,6 +821,19 @@ namespace ss
     this->consume(Token::Type::IDENTIFIER, err_msg);
     this->declare_variable();
     return this->scope_depth > 0 ? 0 : this->identifier_constant(this->previous());
+  }
+
+  auto Parser::parse_arg_list() -> std::size_t
+  {
+    std::size_t arg_count = 0;
+    if (!this->check(Token::Type::RIGHT_PAREN)) {
+      do {
+        arg_count++;
+        this->expression();
+      } while (this->advance_if_matches(Token::Type::COMMA));
+    }
+    this->consume(Token::Type::RIGHT_PAREN, "expect ')' after arguments");
+    return arg_count;
   }
 
   void Parser::define_variable(std::size_t global)
@@ -980,8 +991,10 @@ namespace ss
       case Token::Type::MODULUS: {
         this->emit_instruction(Instruction{OpCode::MOD});
       } break;
-      default:  // unreachable
+      default: {
+        // unreachable
         this->error(this->previous(), "invalid binary operator");
+      } break;
     }
   }
 
@@ -997,8 +1010,10 @@ namespace ss
       case Token::Type::FALSE: {
         this->emit_instruction(Instruction{OpCode::FALSE});
       } break;
-      default:  // unreachable
-        THROW_COMPILETIME_ERROR("invalid literal type");
+      default: {
+        // unreachable
+        this->error(this->previous(), "invalid literal type");
+      } break;
     }
   }
 
@@ -1014,6 +1029,13 @@ namespace ss
     std::size_t end_jmp = this->emit_jump(Instruction{OpCode::OR});
     this->parse_precedence(Precedence::OR);
     this->patch_jump(end_jmp);
+  }
+
+  void Parser::call_expr(bool)
+  {
+    std::size_t arg_count = this->parse_arg_list();
+    this->chunk.write_constant(Value{Value::AddressType{this->chunk.instruction_count() + 1}}, this->previous()->line);
+    this->emit_instruction(Instruction{OpCode::CALL, arg_count});
   }
 
   void Parser::statement()
@@ -1344,7 +1366,7 @@ namespace ss
     if (this->scope_depth > 0) {
       this->locals.back().initialized = true;
     }
-    this->make_function(FnType::FUNCTION);
+    this->make_function(std::string(this->previous()->lexeme));
     this->define_variable(global);
   }
 

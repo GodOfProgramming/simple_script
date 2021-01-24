@@ -2,6 +2,7 @@
 
 #include "cfg.hpp"
 #include "datatypes.hpp"
+#include "exceptions.hpp"
 
 #include <cinttypes>
 #include <functional>
@@ -155,6 +156,10 @@ namespace ss
     /**
      * @brief TODO
      */
+    CALL,
+    /**
+     * @brief TODO
+     */
     RETURN,
   };
 
@@ -200,6 +205,7 @@ namespace ss
       SS_ENUM_TO_STR_CASE(OpCode, LOOP)
       SS_ENUM_TO_STR_CASE(OpCode, OR)
       SS_ENUM_TO_STR_CASE(OpCode, AND)
+      SS_ENUM_TO_STR_CASE(OpCode, CALL)
       SS_ENUM_TO_STR_CASE(OpCode, RETURN)
       default: {
         return "UNKNOWN";
@@ -345,8 +351,8 @@ namespace ss
   class BytecodeChunk
   {
    public:
-    using CodeSegment  = std::vector<Instruction>;
-    using CodeIterator = CodeSegment::iterator;
+    using Instructions        = std::vector<Instruction>;
+    using InstructionIterator = Instructions::iterator;
 
     using GlobalMap            = std::unordered_map<Value::StringType, Value>;
     using LocalCache           = std::unordered_map<std::size_t, std::string>;
@@ -443,7 +449,7 @@ namespace ss
 
     auto instruction_count() const noexcept -> std::size_t;
 
-    auto index_code_mut(std::size_t index) -> Instruction&;
+    auto index_code_mut(std::size_t index) -> InstructionIterator;
 
     auto find_ident(std::string_view name) const noexcept -> IdentifierCacheEntry;
     auto is_entry_found(IdentifierCacheEntry entry) const noexcept -> bool;
@@ -465,9 +471,9 @@ namespace ss
 
     auto is_global_found(GlobalMap::iterator it) const noexcept -> bool;
 
-    auto begin() noexcept -> CodeIterator;
+    auto begin() noexcept -> InstructionIterator;
 
-    auto end() noexcept -> CodeIterator;
+    auto end() noexcept -> InstructionIterator;
 
     /**
      * @brief Prints the stack to the given output stream
@@ -479,7 +485,7 @@ namespace ss
     void print_local_map(VMConfig& cfg) const noexcept;
 
    private:
-    CodeSegment code;
+    Instructions code;
     std::vector<Value> constants;
     std::vector<Value> stack;
     std::vector<std::size_t> lines;
@@ -507,7 +513,12 @@ namespace ss
     std::size_t line;
     std::size_t column;
 
-    void error(std::string msg) const;
+    template <typename... Args>
+    void error(Args&&... args) const
+    {
+      CompiletimeError::throw_err(this->line, ":", this->column, " -> ", args...);
+    }
+
     auto make_token(Token::Type t) const noexcept -> Token;
     auto make_string() -> Token;
     auto make_number() -> Token;
@@ -634,12 +645,16 @@ namespace ss
      */
     std::vector<std::size_t> breaks;
 
-    void write_instruction(Instruction i);
+    template <typename... Args>
+    void error(TokenIterator tok, Args&&... args) const
+    {
+      CompiletimeError::throw_err(tok->line, ":", tok->column, " -> ", args...);
+    }
 
+    void write_instruction(Instruction i);
     auto previous() const -> TokenIterator;
     void advance() noexcept;
     void consume(Token::Type type, std::string err);
-    void error(TokenIterator tok, std::string msg) const;
     void emit_instruction(Instruction i);
     auto emit_jump(Instruction i) -> std::size_t;
     void patch_jump(std::size_t jump_loc);
@@ -651,15 +666,22 @@ namespace ss
      * @param f The function or lambda to call
      */
     void wrap_loop(std::size_t cont_jmp, auto f);
+    /**
+     * @brief Calls a function after preparing for a call instruction sequence.
+     *
+     * @param f The function or lambda to call
+     */
+    void wrap_call_frame(auto f);
 
     auto rule_for(Token::Type t) const noexcept -> const ParseRule&;
     void parse_precedence(Precedence p);
     void make_number(bool can_assign);
     void make_string(bool can_assign);
     void make_variable(bool assign);
-    void make_function(FnType t);
+    void make_function(std::string name);
     void named_variable(TokenIterator name, bool assign);
     auto parse_variable(std::string err_msg) -> std::size_t;
+    auto parse_arg_list() -> std::size_t;
     /**
      * @brief Defines a new variable.
      *
@@ -680,6 +702,7 @@ namespace ss
     void literal_expr(bool);
     void and_expr(bool);
     void or_expr(bool);
+    void call_expr(bool);
 
     void declaration();
 

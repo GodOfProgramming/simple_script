@@ -29,7 +29,7 @@ namespace ss
    private:
     VMConfig config;
     BytecodeChunk chunk;
-    BytecodeChunk::CodeIterator ip;
+    BytecodeChunk::InstructionIterator ip;
     std::size_t sp;
 
     void run_line(std::string line);

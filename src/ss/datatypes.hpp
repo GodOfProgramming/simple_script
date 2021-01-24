@@ -19,6 +19,7 @@ namespace ss
       Number,
       String,
       Function,
+      Address,
     };
 
     struct NilType
@@ -59,12 +60,30 @@ namespace ss
     using StringType   = std::string;
     using FunctionType = std::shared_ptr<Function>;
 
+    struct AddressType
+    {
+      std::size_t ptr;
+
+      auto operator==(const AddressType& other) const noexcept -> bool;
+
+      auto operator!=(const AddressType& other) const noexcept -> bool;
+
+      auto operator>(const AddressType other) const noexcept -> bool;
+
+      auto operator>=(const AddressType other) const noexcept -> bool;
+
+      auto operator<(const AddressType other) const noexcept -> bool;
+
+      auto operator<=(const AddressType other) const noexcept -> bool;
+    };
+
     Value();
     Value(BoolType v);
     Value(NumberType v);
     Value(StringType v);
     Value(const char* v);
     Value(FunctionType v);
+    Value(AddressType v);
 
     auto type() const noexcept -> Type;
     auto is_type(Type t) const noexcept -> bool;
@@ -73,6 +92,7 @@ namespace ss
     auto number() const -> NumberType;
     auto string() const -> StringType;
     auto function() const -> FunctionType;
+    auto address() const -> AddressType;
 
     auto truthy() const -> bool;
     auto to_string() const -> std::string;
@@ -103,7 +123,7 @@ namespace ss
     static NilType nil;
 
    private:
-    std::variant<NilType, BoolType, NumberType, StringType, FunctionType> value;
+    std::variant<NilType, BoolType, NumberType, StringType, FunctionType, AddressType> value;
   };
 
   auto operator<<(std::ostream& ostream, const Value& value) -> std::ostream&;
@@ -111,7 +131,6 @@ namespace ss
   class Function
   {
    public:
-    Function() noexcept;
     virtual ~Function() = default;
 
     virtual auto call(std::vector<Value>&& args) -> Value = 0;
@@ -119,6 +138,7 @@ namespace ss
     virtual auto to_string() const noexcept -> std::string = 0;
 
    protected:
+    Function(std::string&& name, std::size_t airity) noexcept;
     std::string name;
     std::size_t airity;
   };
@@ -128,14 +148,14 @@ namespace ss
   class ScriptFunction: public Function
   {
    public:
+    ScriptFunction(std::string name, std::size_t airity, std::size_t ip);
     ~ScriptFunction() override = default;
 
     auto call(std::vector<Value>&& args) -> Value override;
 
     auto to_string() const noexcept -> std::string override;
 
-   private:
-    std::size_t ip;
+    const std::size_t instruction_ptr;
   };
 
   class NativeFunction: public Function

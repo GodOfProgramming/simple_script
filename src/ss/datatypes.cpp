@@ -2,24 +2,40 @@
 
 #include "exceptions.hpp"
 
-#include <sstream>
 #include <cmath>
+#include <sstream>
 
 namespace ss
 {
   Value::NilType Value::nil;
 
-  Value::Value(): value(nil) {}
+  Value::Value()
+   : value(nil)
+  {}
 
-  Value::Value(BoolType v): value(v) {}
+  Value::Value(BoolType v)
+   : value(v)
+  {}
 
-  Value::Value(NumberType v): value(v) {}
+  Value::Value(NumberType v)
+   : value(v)
+  {}
 
-  Value::Value(StringType v): value(v) {}
+  Value::Value(StringType v)
+   : value(v)
+  {}
 
-  Value::Value(const char* v): Value(std::string(v)) {}
+  Value::Value(const char* v)
+   : Value(std::string(v))
+  {}
 
-  Value::Value(FunctionType v): value(v) {}
+  Value::Value(FunctionType v)
+   : value(v)
+  {}
+
+  Value::Value(AddressType v)
+   : value(v)
+  {}
 
   auto Value::boolean() const -> BoolType
   {
@@ -57,6 +73,15 @@ namespace ss
     }
   }
 
+  auto Value::address() const -> AddressType
+  {
+    if (this->is_type(Type::Address)) {
+      return std::get<AddressType>(this->value);
+    } else {
+      return AddressType{};
+    }
+  }
+
   auto Value::truthy() const -> bool
   {
     switch (this->type()) {
@@ -66,10 +91,11 @@ namespace ss
       case Type::Bool: {
         return this->boolean();
       }
-      default: {
-        return true;
-      }
+      default:
+        break;
     }
+
+    return true;
   }
 
   auto Value::to_string() const -> std::string
@@ -96,11 +122,11 @@ namespace ss
       case Type::Function: {
         return std::get<FunctionType>(this->value)->to_string();
       }
-      default: {
-        // virtually impossible to get here, unable to test
-        THROW_RUNTIME_ERROR("tried converting invalid type to string");
-      }
+      default:
+        break;
     }
+    RuntimeError::throw_err("tried converting invalid type to string");
+    return std::string();
   }
 
   auto Value::operator-() const -> Value
@@ -109,10 +135,11 @@ namespace ss
       case Type::Number: {
         return Value(-std::get<NumberType>(this->value));
       }
-      default: {
-        THROW_RUNTIME_ERROR("negation on invalid type");
-      }
+      default:
+        break;
     }
+    RuntimeError::throw_err("negation on invalid type");
+    return Value();
   }
 
   auto Value::operator!() const -> Value
@@ -131,60 +158,58 @@ namespace ss
             return Value(a + b);
           }
           case Type::String: {
-            auto              b = std::get<StringType>(other.value);
+            auto b = std::get<StringType>(other.value);
             std::stringstream ss;
             ss << a << b;
             return Value(ss.str());
           }
-          default: {
-            THROW_RUNTIME_ERROR("unable to add invalid types");
-          }
+          default:
+            break;
         }
-      }
+      } break;
       case Type::String: {
         auto a = std::get<StringType>(this->value);
         switch (other.type()) {
           case Type::Number: {
-            auto              b = std::get<NumberType>(other.value);
+            auto b = std::get<NumberType>(other.value);
             std::stringstream ss;
             ss << a << b;
             return Value(ss.str());
           }
           case Type::String: {
-            auto              b = std::get<StringType>(other.value);
+            auto b = std::get<StringType>(other.value);
             std::stringstream ss;
             ss << a << b;
             return Value(ss.str());
           }
           case Type::Bool: {
-            auto              b = std::get<BoolType>(other.value);
+            auto b = std::get<BoolType>(other.value);
             std::stringstream ss;
             ss << a << (b ? "true" : "false");
             return Value(ss.str());
           }
-          default: {
-            THROW_RUNTIME_ERROR("unable to add invalid types");
-          }
+          default:
+            break;
         }
-      }
+      } break;
       case Type::Bool: {
         auto a = std::get<BoolType>(this->value);
         switch (other.type()) {
           case Type::String: {
-            auto              b = std::get<StringType>(other.value);
+            auto b = std::get<StringType>(other.value);
             std::stringstream ss;
             ss << (a ? "true" : "false") << b;
             return Value(ss.str());
           }
-          default: {
-            THROW_RUNTIME_ERROR("unable to add invalid types");
-          }
+          default:
+            break;
         }
       } break;
-      default: {
-        THROW_RUNTIME_ERROR("unable to add invalid types");
-      }
+      default:
+        break;
     }
+    RuntimeError::throw_err("unable to add invalid types");
+    return Value();
   }
 
   auto Value::operator-(const Value& other) const -> Value
@@ -197,15 +222,15 @@ namespace ss
             auto b = std::get<NumberType>(other.value);
             return Value(a - b);
           }
-          default: {
-            THROW_RUNTIME_ERROR("unable to sub invalid types");
-          }
+          default:
+            break;
         }
       }
-      default: {
-        THROW_RUNTIME_ERROR("unable to sub invalid types");
-      }
+      default:
+        break;
     }
+    RuntimeError::throw_err("unable to sub invalid types");
+    return Value();
   }
 
   auto Value::operator*(const Value& other) const -> Value
@@ -219,34 +244,33 @@ namespace ss
             return Value(a * b);
           }
           case Type::String: {
-            auto              b = std::get<StringType>(other.value);
+            auto b = std::get<StringType>(other.value);
             std::stringstream ss;
             for (double i = 0; i < a; i++) { ss << b; }
             return Value(ss.str());
           }
-          default: {
-            THROW_RUNTIME_ERROR("unable to mul invalid types");
-          }
+          default:
+            break;
         }
-      }
+      } break;
       case Type::String: {
         auto a = std::get<StringType>(this->value);
         switch (other.type()) {
           case Type::Number: {
-            auto              b = std::get<NumberType>(other.value);
+            auto b = std::get<NumberType>(other.value);
             std::stringstream ss;
             for (double i = 0; i < b; i++) { ss << a; }
             return Value(ss.str());
           }
-          default: {
-            THROW_RUNTIME_ERROR("unable to mul invalid types");
-          }
+          default:
+            break;
         }
       }
-      default: {
-        THROW_RUNTIME_ERROR("unable to mul invalid types");
-      }
+      default:
+        break;
     }
+    RuntimeError::throw_err("unable to mul invalid types");
+    return Value();
   }
 
   auto Value::operator/(const Value& other) const -> Value
@@ -259,15 +283,15 @@ namespace ss
             auto b = std::get<NumberType>(other.value);
             return Value(a / b);
           }
-          default: {
-            THROW_RUNTIME_ERROR("unable to div invalid types");
-          }
+          default:
+            break;
         }
       }
-      default: {
-        THROW_RUNTIME_ERROR("unable to div invalid types");
-      }
+      default:
+        break;
     }
+    RuntimeError::throw_err("unable to div invalid types");
+    return Value();
   }
 
   auto Value::operator%(const Value& other) const -> Value
@@ -280,15 +304,15 @@ namespace ss
             auto b = std::get<NumberType>(other.value);
             return Value(std::fmod(a, b));
           }
-          default: {
-            THROW_RUNTIME_ERROR("unable to div invalid types");
-          }
+          default:
+            break;
         }
       }
-      default: {
-        THROW_RUNTIME_ERROR("unable to div invalid types");
-      }
+      default:
+        break;
     }
+    RuntimeError::throw_err("unable to mod invalid types");
+    return Value();
   }
 
   auto Value::operator=(NilType v) noexcept -> Value&
@@ -371,7 +395,10 @@ namespace ss
     return ostream << value.to_string();
   }
 
-  Function::Function() noexcept: airity(0) {}
+  Function::Function(std::string&& n, std::size_t a) noexcept
+   : name(n)
+   , airity(a)
+  {}
 
   auto Function::to_string() const noexcept -> std::string
   {
@@ -382,6 +409,11 @@ namespace ss
   {
     return ostream << fn.to_string();
   }
+
+  ScriptFunction::ScriptFunction(std::string name, std::size_t airity, std::size_t ip)
+   : Function(std::move(name), airity)
+   , instruction_ptr(ip)
+  {}
 
   auto ScriptFunction::call(std::vector<Value>&& args) -> Value
   {
@@ -407,5 +439,35 @@ namespace ss
     std::stringstream ss;
     ss << "<nf " << this->name << '>';
     return ss.str();
+  }
+
+  auto Value::AddressType::operator==(const AddressType& other) const noexcept -> bool
+  {
+    return this->ptr == other.ptr;
+  }
+
+  auto Value::AddressType::operator!=(const AddressType& other) const noexcept -> bool
+  {
+    return this->ptr != other.ptr;
+  }
+
+  auto Value::AddressType::operator>(const AddressType other) const noexcept -> bool
+  {
+    return this->ptr > other.ptr;
+  }
+
+  auto Value::AddressType::operator>=(const AddressType other) const noexcept -> bool
+  {
+    return this->ptr >= other.ptr;
+  }
+
+  auto Value::AddressType::operator<(const AddressType other) const noexcept -> bool
+  {
+    return this->ptr < other.ptr;
+  }
+
+  auto Value::AddressType::operator<=(const AddressType other) const noexcept -> bool
+  {
+    return this->ptr <= other.ptr;
   }
 }  // namespace ss

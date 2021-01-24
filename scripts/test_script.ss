@@ -1,5 +1,13 @@
-load "helper.ss";
-print x;
+fn foo() {
+  print "in func";
+}
 
-loadr "helper.ss";
-print y;
+{
+  fn bar() {
+    print "in local func";
+  }
+
+  bar();
+}
+
+foo();

@@ -136,42 +136,36 @@ namespace ss
         case OpCode::LOOKUP_GLOBAL: {
           Value name_value = this->chunk.constant_at(this->ip->modifying_bits);
           if (!name_value.is_type(Value::Type::String)) {
-            THROW_RUNTIME_ERROR("invalid type for variable name");
+            RuntimeError::throw_err("invalid type for variable name");
           }
           Value::StringType name = name_value.string();
           auto var               = this->chunk.find_global(name);
           if (!this->chunk.is_global_found(var)) {
-            std::stringstream ss;
-            ss << "variable '" << name << "' is undefined";
-            THROW_RUNTIME_ERROR(ss.str());
+            RuntimeError::throw_err("variable '", name, "' is undefined");
           }
           this->chunk.push_stack(var->second);
         } break;
         case OpCode::DEFINE_GLOBAL: {
           Value name_value = this->chunk.constant_at(this->ip->modifying_bits);
           if (!name_value.is_type(Value::Type::String)) {
-            THROW_RUNTIME_ERROR("invalid type for variable name");
+            RuntimeError::throw_err("invalid type for variable name");
           }
           Value::StringType name = name_value.string();
           auto var               = this->chunk.find_global(name);
           if (this->chunk.is_global_found(var)) {
-            std::stringstream ss;
-            ss << "variable '" << name << "' is already defined";
-            THROW_RUNTIME_ERROR(ss.str());
+            RuntimeError::throw_err("variable '", name, "' is already defined");
           }
           this->chunk.set_global(std::move(name), this->chunk.pop_stack());
         } break;
         case OpCode::ASSIGN_GLOBAL: {
           Value name_value = this->chunk.constant_at(this->ip->modifying_bits);
           if (!name_value.is_type(Value::Type::String)) {
-            THROW_RUNTIME_ERROR("invalid type for variable name");
+            RuntimeError::throw_err("invalid type for variable name");
           }
           Value::StringType name = name_value.string();
           auto var               = this->chunk.find_global(std::move(name));
           if (!this->chunk.is_global_found(var)) {
-            std::stringstream ss;
-            ss << "variable '" << name << "' is undefined";
-            THROW_RUNTIME_ERROR(ss.str());
+            RuntimeError::throw_err("variable '", name, "' is undefined");
           }
           var->second = this->chunk.peek_stack();
         } break;
@@ -276,12 +270,15 @@ namespace ss
           }
         } break;
         case OpCode::RETURN: {
-          return;
+          auto ret = this->chunk.pop_stack();
+          if (!ret.is_type(Value::Type::Address)) {
+            RuntimeError::throw_err("trying to return to invalid value: ", ret);
+          }
+          auto addr = ret.address();
+          this->ip  = this->chunk.index_code_mut(addr.ptr);
         } break;
         default: {
-          std::stringstream ss;
-          ss << "invalid op code: " << static_cast<std::size_t>(this->ip->major_opcode);
-          THROW_RUNTIME_ERROR(ss.str());
+          RuntimeError::throw_err("invalid op code: ", static_cast<std::size_t>(this->ip->major_opcode));
         }
       }
       this->ip++;
@@ -310,7 +307,7 @@ namespace ss
   case OpCode::name:                                                                                                           \
     block break;
 
-    this->config.write(std::setw(4), std::setfill('0'), offset, ' ');
+    this->config.write(std::hex, std::setw(4), std::setfill('0'), offset, ' ');
 
     if (offset > 0 && chunk.line_at(offset) == chunk.line_at(offset - 1)) {
       this->config.write("   | ");
@@ -431,7 +428,18 @@ namespace ss
         this->config.write_line(' ', std::setw(4), i.modifying_bits);
         this->config.reset_ostream();
       })
-      SS_SIMPLE_PRINT_CASE(RETURN)
+      SS_COMPLEX_PRINT_CASE(CALL, {
+        this->config.write(std::setw(16), std::left, i.major_opcode);
+        this->config.reset_ostream();
+        this->config.write_line(std::hex, ' ', std::setw(4), i.modifying_bits);
+        this->config.reset_ostream();
+      })
+      SS_COMPLEX_PRINT_CASE(RETURN, {
+        this->config.write(std::setw(16), std::left, i.major_opcode);
+        this->config.reset_ostream();
+        this->config.write_line(std::hex, ' ', std::setw(4), i.modifying_bits);
+        this->config.reset_ostream();
+      })
       default: {
         this->config.write_line(i.major_opcode, ": ", i.modifying_bits);
       } break;
