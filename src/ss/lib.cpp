@@ -4,14 +4,17 @@
 #include "util.hpp"
 
 #include <exception>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
-#include <fstream>
 
 namespace ss
 {
-  VM::VM(VMConfig cfg): config(cfg), sp(0) {}
+  VM::VM(VMConfig cfg)
+   : config(cfg)
+   , sp(0)
+  {}
 
   void VM::set_var(Value::StringType name, Value value) noexcept
   {
@@ -25,9 +28,9 @@ namespace ss
 
   auto VM::repl(VMConfig cfg) -> int
   {
-    VM          vm(cfg);
-    bool        exit        = false;
-    int         exit_code   = 0;
+    VM vm(cfg);
+    bool exit               = false;
+    int exit_code           = 0;
     std::size_t line_number = 1;
 
     while (!exit) {
@@ -55,7 +58,7 @@ namespace ss
   void VM::run_file(std::string filename)
   {
     std::filesystem::path cwd = std::filesystem::current_path();
-    std::stringstream     ss;
+    std::stringstream ss;
     ss << cwd.string() << '/' << filename;
     this->run_script(util::load_file_to_string(filename), ss.str());
   }
@@ -70,8 +73,8 @@ namespace ss
 
   void VM::run_line(std::string line)
   {
-    std::filesystem::path cwd    = std::filesystem::current_path();
-    std::size_t           offset = this->chunk.instruction_count();
+    std::filesystem::path cwd = std::filesystem::current_path();
+    std::size_t offset        = this->chunk.instruction_count();
     this->compile(cwd.string(), std::move(line));
     this->ip = this->chunk.begin() + offset;
     this->execute();
@@ -135,8 +138,8 @@ namespace ss
           if (!name_value.is_type(Value::Type::String)) {
             THROW_RUNTIME_ERROR("invalid type for variable name");
           }
-          Value::StringType name = name_value.as_string();
-          auto              var  = this->chunk.find_global(name);
+          Value::StringType name = name_value.string();
+          auto var               = this->chunk.find_global(name);
           if (!this->chunk.is_global_found(var)) {
             std::stringstream ss;
             ss << "variable '" << name << "' is undefined";
@@ -149,8 +152,8 @@ namespace ss
           if (!name_value.is_type(Value::Type::String)) {
             THROW_RUNTIME_ERROR("invalid type for variable name");
           }
-          Value::StringType name = name_value.as_string();
-          auto              var  = this->chunk.find_global(name);
+          Value::StringType name = name_value.string();
+          auto var               = this->chunk.find_global(name);
           if (this->chunk.is_global_found(var)) {
             std::stringstream ss;
             ss << "variable '" << name << "' is already defined";
@@ -163,8 +166,8 @@ namespace ss
           if (!name_value.is_type(Value::Type::String)) {
             THROW_RUNTIME_ERROR("invalid type for variable name");
           }
-          Value::StringType name = name_value.as_string();
-          auto              var  = this->chunk.find_global(std::move(name));
+          Value::StringType name = name_value.string();
+          auto var               = this->chunk.find_global(std::move(name));
           if (!this->chunk.is_global_found(var)) {
             std::stringstream ss;
             ss << "variable '" << name << "' is undefined";

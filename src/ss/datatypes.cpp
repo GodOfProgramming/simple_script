@@ -2,46 +2,26 @@
 
 #include "exceptions.hpp"
 
-#include <cmath>
 #include <sstream>
+#include <cmath>
 
 namespace ss
 {
   Value::NilType Value::nil;
 
-  Value::Value()
-   : value(nil)
-  {}
+  Value::Value(): value(nil) {}
 
-  Value::Value(BoolType v)
-   : value(v)
-  {}
+  Value::Value(BoolType v): value(v) {}
 
-  Value::Value(IntType v)
-   : value(v)
-  {}
+  Value::Value(NumberType v): value(v) {}
 
-  Value::Value(UintType v)
-   : value(v)
-  {}
+  Value::Value(StringType v): value(v) {}
 
-  Value::Value(NumberType v)
-   : value(v)
-  {}
+  Value::Value(const char* v): Value(std::string(v)) {}
 
-  Value::Value(StringType v)
-   : value(v)
-  {}
+  Value::Value(FunctionType v): value(v) {}
 
-  Value::Value(const char* v)
-   : Value(std::string(v))
-  {}
-
-  Value::Value(FunctionType v)
-   : value(v)
-  {}
-
-  auto Value::as_bool() const -> BoolType
+  auto Value::boolean() const -> BoolType
   {
     if (this->is_type(Type::Bool)) {
       return std::get<BoolType>(this->value);
@@ -50,25 +30,7 @@ namespace ss
     }
   }
 
-  auto Value::as_int() const -> IntType
-  {
-    if (this->is_type(Type::Int)) {
-      return std::get<IntType>(this->value);
-    } else {
-      return IntType();
-    }
-  }
-
-  auto Value::as_uint() const -> UintType
-  {
-    if (this->is_type(Type::Uint)) {
-      return std::get<UintType>(this->value);
-    } else {
-      return BoolType();
-    }
-  }
-
-  auto Value::as_number() const -> NumberType
+  auto Value::number() const -> NumberType
   {
     if (this->is_type(Type::Number)) {
       return std::get<NumberType>(this->value);
@@ -77,7 +39,7 @@ namespace ss
     }
   }
 
-  auto Value::as_string() const -> StringType
+  auto Value::string() const -> StringType
   {
     if (this->is_type(Type::String)) {
       return std::get<StringType>(this->value);
@@ -86,7 +48,7 @@ namespace ss
     }
   }
 
-  auto Value::as_function() const -> FunctionType
+  auto Value::function() const -> FunctionType
   {
     if (this->is_type(Type::Function)) {
       return std::get<FunctionType>(this->value);
@@ -102,7 +64,7 @@ namespace ss
         return false;
       }
       case Type::Bool: {
-        return this->as_bool();
+        return this->boolean();
       }
       default: {
         return true;
@@ -144,12 +106,6 @@ namespace ss
   auto Value::operator-() const -> Value
   {
     switch (this->type()) {
-      case Type::Int: {
-        return Value(-std::get<IntType>(this->value));
-      }
-      case Type::Uint: {
-        return Value(-IntType{std::get<UintType>(this->value)});
-      }
       case Type::Number: {
         return Value(-std::get<NumberType>(this->value));
       }
@@ -167,41 +123,18 @@ namespace ss
   auto Value::operator+(const Value& other) const -> Value
   {
     switch (this->type()) {
-      case Type::Int: {
-        const auto a = std::get<IntType>(this->value);
-        switch (other.type()) {
-          case Type::Int: {
-            const auto b = std::get<IntType>(this->value);
-            return Value{IntType{a + b}};
-          }
-          case Type::Uint: {
-            const auto b = std::get<UintType>(this->value);
-            return Value{UintType{a + b}};
-          }
-          case Type::Number: {
-            const auto b = std::get<NumberType>(this->value);
-            return Value{NumberType{a + b}};
-          }
-          case Type::String: {
-            auto b = std::get<StringType>(other.value);
-            std::stringstream ss;
-            ss << a << b;
-            return Value{ss.str()};
-          }
-        }
-      }
       case Type::Number: {
         auto a = std::get<NumberType>(this->value);
         switch (other.type()) {
           case Type::Number: {
             auto b = std::get<NumberType>(other.value);
-            return Value{a + b};
+            return Value(a + b);
           }
           case Type::String: {
-            auto b = std::get<StringType>(other.value);
+            auto              b = std::get<StringType>(other.value);
             std::stringstream ss;
             ss << a << b;
-            return Value{ss.str()};
+            return Value(ss.str());
           }
           default: {
             THROW_RUNTIME_ERROR("unable to add invalid types");
@@ -212,19 +145,19 @@ namespace ss
         auto a = std::get<StringType>(this->value);
         switch (other.type()) {
           case Type::Number: {
-            auto b = std::get<NumberType>(other.value);
+            auto              b = std::get<NumberType>(other.value);
             std::stringstream ss;
             ss << a << b;
             return Value(ss.str());
           }
           case Type::String: {
-            auto b = std::get<StringType>(other.value);
+            auto              b = std::get<StringType>(other.value);
             std::stringstream ss;
             ss << a << b;
             return Value(ss.str());
           }
           case Type::Bool: {
-            auto b = std::get<BoolType>(other.value);
+            auto              b = std::get<BoolType>(other.value);
             std::stringstream ss;
             ss << a << (b ? "true" : "false");
             return Value(ss.str());
@@ -238,7 +171,7 @@ namespace ss
         auto a = std::get<BoolType>(this->value);
         switch (other.type()) {
           case Type::String: {
-            auto b = std::get<StringType>(other.value);
+            auto              b = std::get<StringType>(other.value);
             std::stringstream ss;
             ss << (a ? "true" : "false") << b;
             return Value(ss.str());
@@ -286,7 +219,7 @@ namespace ss
             return Value(a * b);
           }
           case Type::String: {
-            auto b = std::get<StringType>(other.value);
+            auto              b = std::get<StringType>(other.value);
             std::stringstream ss;
             for (double i = 0; i < a; i++) { ss << b; }
             return Value(ss.str());
@@ -300,7 +233,7 @@ namespace ss
         auto a = std::get<StringType>(this->value);
         switch (other.type()) {
           case Type::Number: {
-            auto b = std::get<NumberType>(other.value);
+            auto              b = std::get<NumberType>(other.value);
             std::stringstream ss;
             for (double i = 0; i < b; i++) { ss << a; }
             return Value(ss.str());
@@ -359,18 +292,6 @@ namespace ss
   }
 
   auto Value::operator=(NilType v) noexcept -> Value&
-  {
-    this->value = v;
-    return *this;
-  }
-
-  auto Value::operator=(IntType v) noexcept -> Value&
-  {
-    this->value = v;
-    return *this;
-  }
-
-  auto Value::operator=(UintType v) noexcept -> Value&
   {
     this->value = v;
     return *this;
@@ -450,9 +371,7 @@ namespace ss
     return ostream << value.to_string();
   }
 
-  Function::Function() noexcept
-   : airity(0)
-  {}
+  Function::Function() noexcept: airity(0) {}
 
   auto Function::to_string() const noexcept -> std::string
   {
