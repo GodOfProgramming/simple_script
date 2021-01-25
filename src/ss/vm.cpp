@@ -243,6 +243,17 @@ namespace ss
         case OpCode::PRINT: {
           config.write_line(this->chunk.pop_stack());
         } break;
+        case OpCode::SWAP: {
+          Value a = this->chunk.pop_stack();
+          Value b = this->chunk.pop_stack();
+          this->chunk.push_stack(a);
+          this->chunk.push_stack(b);
+        } break;
+        case OpCode::MOVE: {
+          Value top = this->chunk.peek_stack();
+          // shift the value down, useful for returning
+          this->chunk.index_stack_mut(this->chunk.stack_size() - 1 - this->ip->modifying_bits) = top;
+        } break;
         case OpCode::JUMP: {
           this->ip += this->ip->modifying_bits;
           continue;
@@ -294,6 +305,7 @@ namespace ss
         } break;
         case OpCode::RETURN: {
           auto local_count = this->ip->modifying_bits;
+          auto retval      = this->chunk.pop_stack();
 
           // get the return address
           auto v = this->chunk.pop_stack();
@@ -311,6 +323,7 @@ namespace ss
 
           // remove the locals & function
           this->chunk.pop_stack_n(local_count + 1);
+          this->chunk.push_stack(retval);
         } break;
         default: {
           RuntimeError::throw_err("invalid op code: ", static_cast<std::size_t>(this->ip->major_opcode));
@@ -423,6 +436,13 @@ namespace ss
       SS_SIMPLE_PRINT_CASE(NOT)
       SS_SIMPLE_PRINT_CASE(NEGATE)
       SS_SIMPLE_PRINT_CASE(PRINT)
+      SS_SIMPLE_PRINT_CASE(SWAP)
+      SS_COMPLEX_PRINT_CASE(MOVE, {
+        this->config.write(std::setw(16), std::left, i.major_opcode);
+        this->config.reset_ostream();
+        this->config.write_line(' ', std::setw(4), i.modifying_bits);
+        this->config.reset_ostream();
+      })
       SS_COMPLEX_PRINT_CASE(JUMP, {
         this->config.write(std::setw(16), std::left, i.major_opcode);
         this->config.reset_ostream();

@@ -525,7 +525,6 @@ namespace ss
           this->advance();
         } break;
         case '#': {
-          this->advance();
           while (!this->is_at_end() && this->advance() != '\n') {}
         } break;
         default: {
@@ -811,7 +810,16 @@ namespace ss
       return_addr.initialized = false;
       this->locals.push_back(return_addr);
 
-      this->wrap_call_block(airity, [&] { this->block_stmt(); });
+      this->wrap_call_block(airity, [&] { this->fn_block_stmt(); });
+
+      auto count = this->reduce_locals_to_depth(this->scope_depth);
+      if (count > 0) {
+        this->emit_instruction(Instruction{OpCode::POP_N, count});
+      }
+
+      // implicit return
+      this->emit_instruction(Instruction{OpCode::NIL});
+      this->emit_instruction(Instruction{OpCode::RETURN, airity});
 
       this->locals.pop_back();
       this->locals.pop_back();
@@ -1183,6 +1191,14 @@ namespace ss
     });
   }
 
+  void Parser::fn_block_stmt()
+  {
+    this->wrap_scope([&] {
+      while (!this->check(Token::Type::RIGHT_BRACE) && !this->check(Token::Type::END_OF_FILE)) { this->declaration(); }
+      this->consume(Token::Type::RIGHT_BRACE, "expect '}' after block");
+    });
+  }
+
   void Parser::if_stmt()
   {
     this->expression();
@@ -1338,13 +1354,23 @@ namespace ss
     if (!this->in_function) {
       this->error(this->previous(), "returns can only be used within loops");
     }
+    bool should_emit_nil = true;
     if (!this->check(Token::Type::SEMICOLON)) {
       this->expression();
+      should_emit_nil = false;
     }
     this->consume(Token::Type::SEMICOLON, "expected ';' after return");
-    std::size_t count = this->reduce_locals_to_depth(this->loop_depth);
+
+    // - 3 for func, stack ptr, & ret addr
+    this->emit_instruction(Instruction{OpCode::MOVE, this->locals.size() - this->locals_in_function - 3});
+
+    std::size_t count = this->reduce_locals_to_depth(this->function_depth);
     if (count > 0) {
       this->emit_instruction(Instruction{OpCode::POP_N, count});
+    }
+
+    if (should_emit_nil) {
+      this->emit_instruction(Instruction{OpCode::NIL});
     }
     this->emit_instruction(Instruction{OpCode::RETURN, this->locals_in_function});
   }

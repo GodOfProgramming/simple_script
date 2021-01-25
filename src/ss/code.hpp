@@ -134,6 +134,14 @@ namespace ss
      */
     PRINT,
     /**
+     * @brief Swaps the top two values on the stack.
+     */
+    SWAP,
+    /**
+     * @brief Moves, or rather shifts, the top value in the stack down N slots, specified by the modifying bits.
+     */
+    MOVE,
+    /**
      * @brief Jumps to a code location indicated by the modifying bits
      */
     JUMP,
@@ -157,13 +165,9 @@ namespace ss
      * @brief Pushes the stack pointer onto the stack
      */
     PUSH_SP,
-    /**
-     * @brief TODO
-     */
+    /** @brief TODO */
     CALL,
-    /**
-     * @brief TODO
-     */
+    /** @brief TODO */
     RETURN,
   };
 
@@ -204,6 +208,8 @@ namespace ss
       SS_ENUM_TO_STR_CASE(OpCode, NOT)
       SS_ENUM_TO_STR_CASE(OpCode, NEGATE)
       SS_ENUM_TO_STR_CASE(OpCode, PRINT)
+      SS_ENUM_TO_STR_CASE(OpCode, SWAP)
+      SS_ENUM_TO_STR_CASE(OpCode, MOVE)
       SS_ENUM_TO_STR_CASE(OpCode, JUMP)
       SS_ENUM_TO_STR_CASE(OpCode, JUMP_IF_FALSE)
       SS_ENUM_TO_STR_CASE(OpCode, LOOP)
@@ -738,6 +744,7 @@ namespace ss
     void expression_stmt();
     void let_stmt();
     void block_stmt();
+    void fn_block_stmt();
     void if_stmt();
     void loop_stmt();
     void while_stmt();
