@@ -1,13 +1,5 @@
-fn foo() {
-  print "in func";
+fn foo(x, y) {
+  print x + y;
 }
 
-{
-  fn bar() {
-    print "in local func";
-  }
-
-  bar();
-}
-
-foo();
+foo(1, 2);

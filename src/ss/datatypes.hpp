@@ -8,6 +8,8 @@
 namespace ss
 {
   class Function;
+  class ScriptFunction;
+  class NativeFunction;
 
   class Value
   {
@@ -58,7 +60,7 @@ namespace ss
     using BoolType     = bool;
     using NumberType   = double;
     using StringType   = std::string;
-    using FunctionType = std::shared_ptr<Function>;
+    using FunctionType = std::shared_ptr<ScriptFunction>;
 
     struct AddressType
     {
@@ -137,10 +139,11 @@ namespace ss
 
     virtual auto to_string() const noexcept -> std::string = 0;
 
+    const std::string name;
+    const std::size_t airity;
+
    protected:
     Function(std::string&& name, std::size_t airity) noexcept;
-    std::string name;
-    std::size_t airity;
   };
 
   auto operator<<(std::ostream& ostream, const Function& fn) -> std::ostream&;

@@ -3,5 +3,5 @@ target_sources(${EXE_TEST} PRIVATE
   code.test.cpp
   datatypes.test.cpp
   exceptions.test.cpp
-  lib.test.cpp
+  vm.test.cpp
 )

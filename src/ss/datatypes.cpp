@@ -3,6 +3,7 @@
 #include "exceptions.hpp"
 
 #include <cmath>
+#include <iomanip>
 #include <sstream>
 
 namespace ss
@@ -121,6 +122,11 @@ namespace ss
       }
       case Type::Function: {
         return std::get<FunctionType>(this->value)->to_string();
+      }
+      case Type::Address: {
+        std::stringstream ss;
+        ss << "0x" << std::hex << std::setw(4) << std::setfill('0') << std::get<AddressType>(this->value).ptr;
+        return ss.str();
       }
       default:
         break;

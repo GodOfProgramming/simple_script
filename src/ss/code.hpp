@@ -154,6 +154,10 @@ namespace ss
      */
     AND,
     /**
+     * @brief Pushes the stack pointer onto the stack
+     */
+    PUSH_SP,
+    /**
      * @brief TODO
      */
     CALL,
@@ -205,6 +209,7 @@ namespace ss
       SS_ENUM_TO_STR_CASE(OpCode, LOOP)
       SS_ENUM_TO_STR_CASE(OpCode, OR)
       SS_ENUM_TO_STR_CASE(OpCode, AND)
+      SS_ENUM_TO_STR_CASE(OpCode, PUSH_SP)
       SS_ENUM_TO_STR_CASE(OpCode, CALL)
       SS_ENUM_TO_STR_CASE(OpCode, RETURN)
       default: {
@@ -461,10 +466,6 @@ namespace ss
      */
     auto add_ident(std::string_view name) noexcept -> std::size_t;
 
-    void add_local(std::size_t index, std::string name);
-
-    auto lookup_local(std::size_t index) -> std::string_view;
-
     void set_global(Value::StringType&& name, Value value) noexcept;
 
     auto find_global(Value::StringType name) noexcept -> GlobalMap::iterator;
@@ -482,8 +483,6 @@ namespace ss
 
     void print_constants(VMConfig& cfg) const noexcept;
 
-    void print_local_map(VMConfig& cfg) const noexcept;
-
    private:
     Instructions code;
     std::vector<Value> constants;
@@ -492,7 +491,6 @@ namespace ss
     std::size_t last_line            = 0;
     std::size_t instructions_on_line = 0;
     GlobalMap globals;
-    LocalCache local_cache;
     IdentifierCache identifier_cache;
 
     void add_line(std::size_t line) noexcept;
@@ -658,7 +656,20 @@ namespace ss
     void emit_instruction(Instruction i);
     auto emit_jump(Instruction i) -> std::size_t;
     void patch_jump(std::size_t jump_loc);
+    /**
+     * @brief Prepares for a new scope. Used for functions or control flow
+     */
     void wrap_scope(auto f);
+    /**
+     * @brief Cleans up after a typical code block. Writes a POP_N instruction after to take care of local vars
+     */
+    void wrap_block(auto f);
+    /**
+     * @brief Calls a function after preparing for a call instruction sequence.
+     *
+     * @param f The function or lambda to call
+     */
+    void wrap_call_frame(auto f);
     /**
      * @brief Calls a function after preparing for a loop sequence. Then after the function restors old state
      *
@@ -666,12 +677,6 @@ namespace ss
      * @param f The function or lambda to call
      */
     void wrap_loop(std::size_t cont_jmp, auto f);
-    /**
-     * @brief Calls a function after preparing for a call instruction sequence.
-     *
-     * @param f The function or lambda to call
-     */
-    void wrap_call_frame(auto f);
 
     auto rule_for(Token::Type t) const noexcept -> const ParseRule&;
     void parse_precedence(Precedence p);

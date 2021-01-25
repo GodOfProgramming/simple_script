@@ -1,4 +1,4 @@
-#include "lib.hpp"
+#include "vm.hpp"
 
 #include "exceptions.hpp"
 #include "util.hpp"
@@ -8,6 +8,15 @@
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+
+#define SS_SIMPLE_PRINT_CASE(name)                                                                                             \
+  case OpCode::name: {                                                                                                         \
+    this->config.write_line(OpCode::name);                                                                                     \
+  } break;
+
+#define SS_COMPLEX_PRINT_CASE(name, block)                                                                                     \
+  case OpCode::name:                                                                                                           \
+    block break;
 
 namespace ss
 {
@@ -95,9 +104,6 @@ namespace ss
     if constexpr (PRINT_CONSTANTS) {
       this->chunk.print_constants(this->config);
     }
-    if constexpr (PRINT_LOCAL_MAPPING) {
-      this->chunk.print_local_map(this->config);
-    }
     while (this->ip < this->chunk.end()) {
       if constexpr (DISASSEMBLE_INSTRUCTIONS) {
         if constexpr (PRINT_STACK) {
@@ -128,10 +134,10 @@ namespace ss
           this->chunk.pop_stack_n(this->ip->modifying_bits);
         } break;
         case OpCode::LOOKUP_LOCAL: {
-          this->chunk.push_stack(this->chunk.index_stack(this->ip->modifying_bits));
+          this->chunk.push_stack(this->chunk.index_stack(this->sp + this->ip->modifying_bits));
         } break;
         case OpCode::ASSIGN_LOCAL: {
-          this->chunk.index_stack_mut(this->ip->modifying_bits) = this->chunk.peek_stack();
+          this->chunk.index_stack_mut(this->sp + this->ip->modifying_bits) = this->chunk.peek_stack();
         } break;
         case OpCode::LOOKUP_GLOBAL: {
           Value name_value = this->chunk.constant_at(this->ip->modifying_bits);
@@ -269,13 +275,42 @@ namespace ss
             this->chunk.pop_stack();
           }
         } break;
-        case OpCode::RETURN: {
-          auto ret = this->chunk.pop_stack();
-          if (!ret.is_type(Value::Type::Address)) {
-            RuntimeError::throw_err("trying to return to invalid value: ", ret);
+        case OpCode::PUSH_SP: {
+          this->chunk.push_stack(Value{Value::AddressType{this->sp}});
+          // - 1 for the fn on the stack, - 1 because size()
+          this->sp = this->chunk.stack_size() - this->ip->modifying_bits - 1 - 1;
+        } break;
+        case OpCode::CALL: {
+          auto fn_val = this->chunk.peek_stack(this->ip->modifying_bits + 2);
+          if (!fn_val.is_type(Value::Type::Function)) {
+            RuntimeError::throw_err("tried calling non-function: ", fn_val);
           }
-          auto addr = ret.address();
-          this->ip  = this->chunk.index_code_mut(addr.ptr);
+          auto fn = fn_val.function();
+          if (this->ip->modifying_bits != fn->airity) {
+            RuntimeError::throw_err(
+             "tried calling function with incorrect number of args, expected ", fn->airity, ", got ", this->ip->modifying_bits);
+          }
+          this->ip = this->chunk.index_code_mut(fn->instruction_ptr);
+        } break;
+        case OpCode::RETURN: {
+          auto local_count = this->ip->modifying_bits;
+
+          // get the return address
+          auto v = this->chunk.pop_stack();
+          if (!v.is_type(Value::Type::Address)) {
+            RuntimeError::throw_err("trying to return to an invalid value: ", v);
+          }
+          this->ip = this->chunk.index_code_mut(v.address().ptr);
+
+          // restore the stack pointer
+          v        = this->chunk.pop_stack();
+          this->sp = v.address().ptr;
+          if (!v.is_type(Value::Type::Address)) {
+            RuntimeError::throw_err("trying to set the stack pointer to an invalid value: ", v);
+          }
+
+          // remove the locals & function
+          this->chunk.pop_stack_n(local_count + 1);
         } break;
         default: {
           RuntimeError::throw_err("invalid op code: ", static_cast<std::size_t>(this->ip->major_opcode));
@@ -298,21 +333,13 @@ namespace ss
 
   void VM::disassemble_instruction(Instruction i, std::size_t offset) noexcept
   {
-#define SS_SIMPLE_PRINT_CASE(name)                                                                                             \
-  case OpCode::name: {                                                                                                         \
-    this->config.write_line(OpCode::name);                                                                                     \
-  } break;
+    this->config.write("0x", std::hex, std::setw(4), std::setfill('0'), offset, ' ');
+    this->config.reset_ostream();
 
-#define SS_COMPLEX_PRINT_CASE(name, block)                                                                                     \
-  case OpCode::name:                                                                                                           \
-    block break;
-
-    this->config.write(std::hex, std::setw(4), std::setfill('0'), offset, ' ');
-
-    if (offset > 0 && chunk.line_at(offset) == chunk.line_at(offset - 1)) {
+    if (offset > 0 && this->chunk.line_at(offset) == this->chunk.line_at(offset - 1)) {
       this->config.write("   | ");
     } else {
-      this->config.write(std::setw(4), std::setfill('0'), chunk.line_at(offset), ' ');
+      this->config.write(std::setw(4), std::setfill('0'), this->chunk.line_at(offset), ' ');
     }
 
     this->config.reset_ostream();
@@ -320,7 +347,7 @@ namespace ss
     switch (i.major_opcode) {
       SS_SIMPLE_PRINT_CASE(NO_OP)
       SS_COMPLEX_PRINT_CASE(CONSTANT, {
-        Value constant = chunk.constant_at(i.modifying_bits);
+        Value constant = this->chunk.constant_at(i.modifying_bits);
         this->config.write(std::setw(16), std::left, i.major_opcode);
         this->config.reset_ostream();
         this->config.write(' ', std::setw(4), i.modifying_bits);
@@ -339,48 +366,46 @@ namespace ss
         this->config.reset_ostream();
       })
       SS_COMPLEX_PRINT_CASE(LOOKUP_LOCAL, {
-        auto name = chunk.lookup_local(i.modifying_bits);
         this->config.write(std::setw(16), std::left, i.major_opcode);
         this->config.reset_ostream();
         this->config.write(' ', std::setw(4), i.modifying_bits);
         this->config.reset_ostream();
-        this->config.write(" '", name, "'\n");
+        this->config.write_line(" ", this->sp + i.modifying_bits);
         this->config.reset_ostream();
       })
       SS_COMPLEX_PRINT_CASE(ASSIGN_LOCAL, {
-        auto name = chunk.lookup_local(i.modifying_bits);
         this->config.write(std::setw(16), std::left, i.major_opcode);
         this->config.reset_ostream();
         this->config.write(' ', std::setw(4), i.modifying_bits);
         this->config.reset_ostream();
-        this->config.write(" '", name, "'\n");
+        this->config.write_line(" ", this->sp + i.modifying_bits);
         this->config.reset_ostream();
       })
       SS_COMPLEX_PRINT_CASE(LOOKUP_GLOBAL, {
-        Value constant = chunk.constant_at(i.modifying_bits);
+        Value constant = this->chunk.constant_at(i.modifying_bits);
         this->config.write(std::setw(16), std::left, i.major_opcode);
         this->config.reset_ostream();
         this->config.write(' ', std::setw(4), i.modifying_bits);
         this->config.reset_ostream();
-        this->config.write(" '", constant.to_string(), "'\n");
+        this->config.write_line(" '", constant.to_string(), '\'');
         this->config.reset_ostream();
       })
       SS_COMPLEX_PRINT_CASE(DEFINE_GLOBAL, {
-        Value constant = chunk.constant_at(i.modifying_bits);
+        Value constant = this->chunk.constant_at(i.modifying_bits);
         this->config.write(std::setw(16), std::left, i.major_opcode);
         this->config.reset_ostream();
         this->config.write(' ', std::setw(4), i.modifying_bits);
         this->config.reset_ostream();
-        this->config.write(" '", constant.to_string(), "'\n");
+        this->config.write_line(" '", constant.to_string(), '\'');
         this->config.reset_ostream();
       })
       SS_COMPLEX_PRINT_CASE(ASSIGN_GLOBAL, {
-        Value constant = chunk.constant_at(i.modifying_bits);
+        Value constant = this->chunk.constant_at(i.modifying_bits);
         this->config.write(std::setw(16), std::left, i.major_opcode);
         this->config.reset_ostream();
         this->config.write(' ', std::setw(4), i.modifying_bits);
         this->config.reset_ostream();
-        this->config.write(" '", constant.to_string(), "'\n");
+        this->config.write_line(" '", constant.to_string(), '\'');
         this->config.reset_ostream();
       })
       SS_SIMPLE_PRINT_CASE(EQUAL)
@@ -428,6 +453,7 @@ namespace ss
         this->config.write_line(' ', std::setw(4), i.modifying_bits);
         this->config.reset_ostream();
       })
+      SS_SIMPLE_PRINT_CASE(PUSH_SP)
       SS_COMPLEX_PRINT_CASE(CALL, {
         this->config.write(std::setw(16), std::left, i.major_opcode);
         this->config.reset_ostream();
@@ -444,7 +470,5 @@ namespace ss
         this->config.write_line(i.major_opcode, ": ", i.modifying_bits);
       } break;
     }
-
-#undef SS_SIMPLE_PRINT_CASE
   }
 }  // namespace ss

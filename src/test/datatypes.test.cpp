@@ -1,6 +1,7 @@
 #include "helpers.hpp"
 #include "ss/exceptions.hpp"
-#include "ss/lib.hpp"
+#include "ss/vm.hpp"
+
 #include <gtest/gtest.h>
 
 using ss::RuntimeError;

@@ -1,6 +1,6 @@
 set(SHARED_SOURCES
   cfg.cpp
-  lib.cpp
+  vm.cpp
   code.cpp
   datatypes.cpp
   exceptions.cpp

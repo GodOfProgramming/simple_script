@@ -9,7 +9,6 @@ namespace ss
   constexpr bool DISASSEMBLE_INSTRUCTIONS = false;
   constexpr bool PRINT_STACK              = false;
   constexpr bool PRINT_CONSTANTS          = false;
-  constexpr bool PRINT_LOCAL_MAPPING      = false;
   constexpr bool ECHO_INPUT               = false;
 
   template <typename T>

@@ -78,7 +78,7 @@
     "stack": "cpp",
     "cstdbool": "cpp",
     "charconv": "cpp",
-    "*.ss": "cpp",
+    "*.ss": "simplescript",
     "filesystem": "cpp"
   },
   "C_Cpp.intelliSenseEngineFallback": "Enabled"

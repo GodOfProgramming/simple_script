@@ -39,7 +39,6 @@ namespace ss
     this->lines.clear();
     this->last_line            = 0;
     this->instructions_on_line = 0;
-    this->local_cache.clear();
     this->identifier_cache.clear();
   }
 
@@ -176,16 +175,6 @@ namespace ss
     return indx;
   }
 
-  void BytecodeChunk::add_local(std::size_t index, std::string name)
-  {
-    this->local_cache.emplace(index, name);
-  }
-
-  auto BytecodeChunk::lookup_local(std::size_t index) -> std::string_view
-  {
-    return this->local_cache[index];
-  }
-
   void BytecodeChunk::set_global(Value::StringType&& name, Value value) noexcept
   {
     this->globals[name] = value;
@@ -216,12 +205,6 @@ namespace ss
   {
     cfg.write_line("CONSTANTS");
     for (std::size_t i = 0; i < this->constants.size(); i++) { cfg.write_line(i, "=", this->constant_at(i)); }
-  }
-
-  void BytecodeChunk::print_local_map(VMConfig& cfg) const noexcept
-  {
-    cfg.write_line("LOCALS");
-    for (const auto& pair : this->local_cache) { cfg.write_line(pair.first, "=", pair.second); }
   }
 
   Scanner::Scanner(std::string&& src) noexcept
@@ -622,6 +605,11 @@ namespace ss
     f();
 
     this->scope_depth--;
+  }
+
+  void Parser::wrap_block(auto f)
+  {
+    this->wrap_scope(f);
 
     std::size_t count = 0;
     while (!this->locals.empty() && this->locals.back().depth > this->scope_depth) {
@@ -629,7 +617,28 @@ namespace ss
       count++;
     }
 
-    this->emit_instruction(Instruction{OpCode::POP_N, count});
+    if (count > 0) {
+      this->emit_instruction(Instruction{OpCode::POP_N, count});
+    }
+  }
+
+  void Parser::wrap_call_frame(auto f)
+  {
+    auto old_locals = std::move(this->locals);
+
+    Local callable;
+    callable.depth       = this->scope_depth;
+    callable.initialized = false;
+    this->locals.push_back(callable);
+
+    std::size_t pops;
+    this->wrap_scope([&] { pops = f(); });
+
+    this->locals.pop_back();
+
+    this->emit_instruction(Instruction{OpCode::RETURN, pops});
+
+    this->locals = std::move(old_locals);
   }
 
   void Parser::wrap_loop(std::size_t cont_jmp, auto f)
@@ -648,15 +657,6 @@ namespace ss
     this->loop_depth   = old_depth;
     this->breaks       = std::move(old_breaks);
     this->continue_jmp = old_continue;
-  }
-
-  void Parser::wrap_call_frame(auto f)
-  {
-    std::vector<Local> old_locals = std::move(this->locals);
-    this->locals.push_back(Local{});  // return addr
-    this->wrap_scope(f);
-    this->locals = std::move(old_locals);
-    this->emit_instruction(Instruction{OpCode::RETURN});
   }
 
   auto Parser::rule_for(Token::Type t) const noexcept -> const ParseRule&
@@ -771,8 +771,10 @@ namespace ss
     auto decl_line     = this->previous()->line;
     auto end_jmp       = this->emit_jump(Instruction{OpCode::JUMP});
     std::size_t airity = 0;
+
     this->wrap_call_frame([&] {
       this->consume(Token::Type::LEFT_PAREN, "expect '(' after function name");
+
       if (!this->check(Token::Type::RIGHT_PAREN)) {
         do {
           airity++;
@@ -780,13 +782,31 @@ namespace ss
           this->define_variable(param_const);
         } while (this->advance_if_matches(Token::Type::COMMA));
       }
+
       this->consume(Token::Type::RIGHT_PAREN, "expect ')' after parameters");
+
       this->consume(Token::Type::LEFT_BRACE, "expect '{' before function body");
 
+      Local stack_ptr;
+      stack_ptr.depth       = this->scope_depth;
+      stack_ptr.initialized = false;
+      this->locals.push_back(stack_ptr);
+
+      Local return_addr;
+      return_addr.depth       = this->scope_depth;
+      return_addr.initialized = false;
+      this->locals.push_back(return_addr);
+
       this->block_stmt();
+
+      this->locals.pop_back();
+      this->locals.pop_back();
+
+      return airity;
     });
+
     this->patch_jump(end_jmp);
-    this->chunk.write_constant(Value{std::make_shared<ScriptFunction>(name, 0, end_jmp + 1)}, decl_line);
+    this->chunk.write_constant(Value{std::make_shared<ScriptFunction>(name, airity, end_jmp)}, decl_line);
   }
 
   void Parser::named_variable(TokenIterator name, bool can_assign)
@@ -894,10 +914,6 @@ namespace ss
     local.depth       = this->scope_depth;
     local.initialized = false;
     this->locals.push_back(local);
-
-    if constexpr (DISASSEMBLE_CHUNK || DISASSEMBLE_INSTRUCTIONS) {
-      this->chunk.add_local(this->locals.size() - 1, std::string(name->lexeme));
-    }
   }
 
   auto Parser::resolve_local(TokenIterator name) const -> VarLookup
@@ -1034,7 +1050,8 @@ namespace ss
   void Parser::call_expr(bool)
   {
     std::size_t arg_count = this->parse_arg_list();
-    this->chunk.write_constant(Value{Value::AddressType{this->chunk.instruction_count() + 1}}, this->previous()->line);
+    this->emit_instruction(Instruction{OpCode::PUSH_SP, arg_count});
+    this->chunk.write_constant(Value{Value::AddressType{this->chunk.instruction_count() + 2}}, this->previous()->line);
     this->emit_instruction(Instruction{OpCode::CALL, arg_count});
   }
 
@@ -1134,7 +1151,7 @@ namespace ss
 
   void Parser::block_stmt()
   {
-    this->wrap_scope([&] {
+    this->wrap_block([&] {
       while (!this->check(Token::Type::RIGHT_BRACE) && !this->check(Token::Type::END_OF_FILE)) { this->declaration(); }
       this->consume(Token::Type::RIGHT_BRACE, "expect '}' after block");
     });
@@ -1194,7 +1211,7 @@ namespace ss
 
   void Parser::for_stmt()
   {
-    this->wrap_scope([&] {
+    this->wrap_block([&] {
       if (this->advance_if_matches(Token::Type::SEMICOLON)) {
         // no initializer
       } else if (this->advance_if_matches(Token::Type::LET)) {

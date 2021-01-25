@@ -1,5 +1,5 @@
-#include "ss/lib.hpp"
 #include "ss/exceptions.hpp"
+#include "ss/vm.hpp"
 
 int main(int argc, char* argv[])
 {
