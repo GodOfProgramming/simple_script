@@ -26,7 +26,7 @@
       "patterns": [
         {
           "name": "keyword.control.simplescript",
-          "match": "\\b(and|break|continue|else|for|if|loop|match|or|return|while)\\b"
+          "match": "\\b(and|break|cont|else|for|if|loop|match|or|ret|while)\\b"
         },
         {
           "name": "keyword.declaration.simplescript",

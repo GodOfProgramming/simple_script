@@ -386,7 +386,7 @@ namespace ss
             return this->check_keyword(2, 3, "ass", Token::Type::CLASS);
           }
           case 'o': {
-            return this->check_keyword(2, 6, "ntinue", Token::Type::CONTINUE);
+            return this->check_keyword(2, 2, "nt", Token::Type::CONTINUE);
           }
           default:
             return Token::Type::IDENTIFIER;
@@ -454,7 +454,7 @@ namespace ss
       case 'p':
         return this->check_keyword(1, 4, "rint", Token::Type::PRINT);
       case 'r':
-        return this->check_keyword(1, 5, "eturn", Token::Type::RETURN);
+        return this->check_keyword(1, 2, "et", Token::Type::RETURN);
       case 't':
         return this->check_keyword(1, 3, "rue", Token::Type::TRUE);
       case 'w':
@@ -631,14 +631,28 @@ namespace ss
     callable.initialized = false;
     this->locals.push_back(callable);
 
-    std::size_t pops;
-    this->wrap_scope([&] { pops = f(); });
+    this->wrap_scope(f);
 
     this->locals.pop_back();
 
-    this->emit_instruction(Instruction{OpCode::RETURN, pops});
-
     this->locals = std::move(old_locals);
+  }
+
+  void Parser::wrap_call_block(std::size_t arg_count, auto f)
+  {
+    auto old_in_function        = this->in_function;
+    auto old_fn_depth           = this->function_depth;
+    auto old_locals_in_function = this->locals_in_function;
+
+    this->in_function        = true;
+    this->function_depth     = this->scope_depth;
+    this->locals_in_function = arg_count;
+
+    f();
+
+    this->in_function        = old_in_function;
+    this->function_depth     = old_fn_depth;
+    this->locals_in_function = old_locals_in_function;
   }
 
   void Parser::wrap_loop(std::size_t cont_jmp, auto f)
@@ -797,12 +811,10 @@ namespace ss
       return_addr.initialized = false;
       this->locals.push_back(return_addr);
 
-      this->block_stmt();
+      this->wrap_call_block(airity, [&] { this->block_stmt(); });
 
       this->locals.pop_back();
       this->locals.pop_back();
-
-      return airity;
     });
 
     this->patch_jump(end_jmp);
@@ -935,6 +947,16 @@ namespace ss
      .type  = VarLookup::Type::GLOBAL,
      .index = 0,
     };
+  }
+
+  auto Parser::reduce_locals_to_depth(std::size_t depth) -> std::size_t
+  {
+    std::size_t count = 0;
+    while (!this->locals.empty() && this->locals.back().depth > depth) {
+      this->locals.pop_back();
+      count++;
+    }
+    return count;
   }
 
   void Parser::expression()
@@ -1101,6 +1123,10 @@ namespace ss
       case Token::Type::PRINT: {
         this->advance();
         this->print_stmt();
+      } break;
+      case Token::Type::RETURN: {
+        this->advance();
+        this->return_stmt();
       } break;
       case Token::Type::WHILE: {
         this->advance();
@@ -1287,12 +1313,10 @@ namespace ss
       this->error(this->previous(), "breaks can only be used within loops");
     }
     this->consume(Token::Type::SEMICOLON, "expect ';' after break");
-    std::size_t count = 0;
-    while (!this->locals.empty() && this->locals.back().depth > this->loop_depth) {
-      this->locals.pop_back();
-      count++;
+    std::size_t count = this->reduce_locals_to_depth(this->loop_depth);
+    if (count > 0) {
+      this->emit_instruction(Instruction{OpCode::POP_N, count});
     }
-    this->emit_instruction(Instruction{OpCode::POP_N, count});
     this->breaks.push_back(this->emit_jump(Instruction{OpCode::JUMP}));
   }
 
@@ -1302,13 +1326,27 @@ namespace ss
       this->error(this->previous(), "continues can only be used within loops");
     }
     this->consume(Token::Type::SEMICOLON, "expect ';' after continue");
-    std::size_t count = 0;
-    while (!this->locals.empty() && this->locals.back().depth > this->loop_depth) {
-      this->locals.pop_back();
-      count++;
+    std::size_t count = this->reduce_locals_to_depth(this->loop_depth);
+    if (count > 0) {
+      this->emit_instruction(Instruction{OpCode::POP_N, count});
     }
-    this->emit_instruction(Instruction{OpCode::POP_N, count});
     this->emit_instruction(Instruction{OpCode::LOOP, this->chunk.instruction_count() - this->continue_jmp});
+  }
+
+  void Parser::return_stmt()
+  {
+    if (!this->in_function) {
+      this->error(this->previous(), "returns can only be used within loops");
+    }
+    if (!this->check(Token::Type::SEMICOLON)) {
+      this->expression();
+    }
+    this->consume(Token::Type::SEMICOLON, "expected ';' after return");
+    std::size_t count = this->reduce_locals_to_depth(this->loop_depth);
+    if (count > 0) {
+      this->emit_instruction(Instruction{OpCode::POP_N, count});
+    }
+    this->emit_instruction(Instruction{OpCode::RETURN, this->locals_in_function});
   }
 
   void Parser::load_stmt()

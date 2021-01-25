@@ -643,6 +643,21 @@ namespace ss
      */
     std::vector<std::size_t> breaks;
 
+    /**
+     * @brief True if inside some kind of function, false otherwise
+     */
+    bool in_function;
+
+    /**
+     * @brief Number of parameters to deallocate upon returning from the last function
+     */
+    std::size_t locals_in_function;
+
+    /**
+     * @brief Depth level at beginning of the last function
+     */
+    std::size_t function_depth;
+
     template <typename... Args>
     void error(TokenIterator tok, Args&&... args) const
     {
@@ -670,6 +685,12 @@ namespace ss
      * @param f The function or lambda to call
      */
     void wrap_call_frame(auto f);
+    /**
+     * @brief Calls a function after preparing for a function block.
+     *
+     * @param f The function or lambda to call
+     */
+    void wrap_call_block(std::size_t arg_count, auto f);
     /**
      * @brief Calls a function after preparing for a loop sequence. Then after the function restors old state
      *
@@ -699,6 +720,7 @@ namespace ss
     auto advance_if_matches(Token::Type type) -> bool;
     void add_local(TokenIterator token) noexcept;
     auto resolve_local(TokenIterator token) const -> VarLookup;
+    auto reduce_locals_to_depth(std::size_t depth) -> std::size_t;
 
     void expression();
     void grouping_expr(bool);
@@ -722,6 +744,7 @@ namespace ss
     void for_stmt();
     void break_stmt();
     void continue_stmt();
+    void return_stmt();
     void match_stmt();
     void load_stmt();
     void loadr_stmt();
