@@ -1,5 +1,4 @@
-fn foo() {
-  end 1;
+fn foo(x, y) {
+  ret x + y;
 }
-
-foo();
+print foo(1, 2);

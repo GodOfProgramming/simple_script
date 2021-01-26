@@ -241,7 +241,6 @@ namespace ss
           this->chunk.push_stack(-this->chunk.pop_stack());
         } break;
         case OpCode::PRINT: {
-          std::cout << "PRINTING\n";
           config.write_line(this->chunk.pop_stack());
         } break;
         case OpCode::SWAP: {
@@ -325,6 +324,7 @@ namespace ss
           // remove the locals & function
           this->chunk.pop_stack_n(local_count + 1);
           this->chunk.push_stack(retval);
+          continue;
         } break;
         case OpCode::END: {
           if constexpr (PRINT_STACK) {

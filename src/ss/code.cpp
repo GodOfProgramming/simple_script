@@ -566,7 +566,7 @@ namespace ss
   void Parser::parse()
   {
     while (this->iter < tokens.end() && this->iter->type != Token::Type::END_OF_FILE) { this->declaration(); }
-    this->chunk.write_constant(Value{}, this->previous()->line);
+    this->emit_constant(Value{});
     this->emit_instruction(Instruction{OpCode::END});
   }
 
@@ -592,6 +592,11 @@ namespace ss
   void Parser::emit_instruction(Instruction i)
   {
     this->chunk.write(i, this->previous()->line);
+  }
+
+  void Parser::emit_constant(Value v)
+  {
+    this->chunk.write_constant(v, this->previous()->line);
   }
 
   auto Parser::emit_jump(Instruction i) -> std::size_t
@@ -742,7 +747,6 @@ namespace ss
   void Parser::parse_precedence(Precedence precedence)
   {
     this->advance();
-    std::cout << "parsing precidence for " << *this->previous() << '\n';
     ParseFn prefix_rule = this->rule_for(this->previous()->type).prefix;
     if (prefix_rule == nullptr) {
       this->error(this->previous(), "expected an expression");
@@ -777,13 +781,13 @@ namespace ss
       this->error(this->previous(), "unparsable number");
     }
 
-    this->chunk.write_constant(v, this->previous()->line);
+    this->emit_constant(v);
   }
 
   void Parser::make_string(bool)
   {
     Value v(std::string(this->previous()->lexeme));
-    this->chunk.write_constant(v, this->previous()->line);
+    this->emit_constant(v);
   }
 
   void Parser::make_variable(bool can_assign)
@@ -793,7 +797,6 @@ namespace ss
 
   void Parser::make_function(std::string name)
   {
-    auto decl_line     = this->previous()->line;
     auto end_jmp       = this->emit_jump(Instruction{OpCode::JUMP});
     std::size_t airity = 0;
 
@@ -838,7 +841,7 @@ namespace ss
     });
 
     this->patch_jump(end_jmp);
-    this->chunk.write_constant(Value{std::make_shared<ScriptFunction>(name, airity, end_jmp)}, decl_line);
+    this->emit_constant(Value{std::make_shared<ScriptFunction>(name, airity, end_jmp)});
   }
 
   void Parser::named_variable(TokenIterator name, bool can_assign)
@@ -1093,7 +1096,7 @@ namespace ss
   {
     std::size_t arg_count = this->parse_arg_list();
     this->emit_instruction(Instruction{OpCode::PUSH_SP, arg_count});
-    this->chunk.write_constant(Value{Value::AddressType{this->chunk.instruction_count() + 2}}, this->previous()->line);
+    this->emit_constant(Value{Value::AddressType{this->chunk.instruction_count() + 2}});
     this->emit_instruction(Instruction{OpCode::CALL, arg_count});
   }
 

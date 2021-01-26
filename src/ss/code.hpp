@@ -679,6 +679,7 @@ namespace ss
     void advance() noexcept;
     void consume(Token::Type type, std::string err);
     void emit_instruction(Instruction i);
+    void emit_constant(Value v);
     auto emit_jump(Instruction i) -> std::size_t;
     void patch_jump(std::size_t jump_loc);
     /**
