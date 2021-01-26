@@ -1,5 +1,6 @@
-#include "helpers.hpp"
 #include "ss/vm.hpp"
+
+#include "helpers.hpp"
 
 #include <gtest/gtest.h>
 
@@ -151,4 +152,15 @@ TEST_F(TestVM, complex)
   this->vm->run_script(script);
 
   EXPECT_EQ(this->ostream->str(), "1\n2\n3\n4\n5\n");
+}
+
+TEST_F(TestVM, fn)
+{
+  const char* script = {
+#include "scripts/fn_script.ss"
+  };
+
+  this->vm->run_script(script);
+
+  EXPECT_EQ(this->ostream->str(), "-4\n");
 }
