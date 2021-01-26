@@ -165,7 +165,7 @@ namespace ss
      * @brief Pushes the stack pointer onto the stack
      */
     PUSH_SP,
-    /** @brief TODO */
+    /** @brief Calls the instruction on the stack. Number of arguments is specified by the modifying bits */
     CALL,
     /** @brief TODO */
     RETURN,

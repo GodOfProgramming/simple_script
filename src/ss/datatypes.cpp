@@ -136,6 +136,9 @@ namespace ss
       case Type::Function: {
         return std::get<FunctionType>(this->value)->to_string();
       }
+      case Type::Native: {
+        return std::get<NativeFunctionType>(this->value)->to_string();
+      }
       case Type::Address: {
         std::stringstream ss;
         ss << "0x" << std::hex << std::setw(4) << std::setfill('0') << std::get<AddressType>(this->value).ptr;

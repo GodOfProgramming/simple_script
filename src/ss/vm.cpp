@@ -307,8 +307,20 @@ namespace ss
             } break;
             case Value::Type::Native: {
               auto fn = fn_val.native();
+              if (this->ip->modifying_bits != fn->airity) {
+                RuntimeError::throw_err(
+                 "tried calling function with incorrect number of args, expected ",
+                 fn->airity,
+                 ", got ",
+                 this->ip->modifying_bits);
+              }
               std::vector<Value> args;
+              // remove the stack pointer & return address
+              this->chunk.pop_stack_n(2);
+              // push arguments into vector
               for (std::size_t i = 0; i < fn->airity; i++) { args.push_back(std::move(this->chunk.pop_stack())); }
+              // remove the function
+              this->chunk.pop_stack();
               this->chunk.push_stack(fn->call(std::move(args)));
             } break;
             default: {

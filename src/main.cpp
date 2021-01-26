@@ -1,13 +1,24 @@
 #include "ss/exceptions.hpp"
 #include "ss/vm.hpp"
 
+#include <chrono>
+
 int main(int argc, char* argv[])
 {
   using ss::CompiletimeError;
+  using ss::NativeFunction;
   using ss::RuntimeError;
+  using ss::Value;
   using ss::VM;
+  using Args = ss::NativeFunction::Args;
 
   VM vm;
+
+  vm.set_var("clock", Value(std::make_shared<NativeFunction>("clock", 0, [](Args&&) {
+               auto tp                                       = std::chrono::high_resolution_clock::now();
+               std::chrono::duration<Value::NumberType> secs = tp.time_since_epoch();
+               return Value(Value::NumberType{secs.count()});
+             })));
 
   if (argc > 1) {
     try {
