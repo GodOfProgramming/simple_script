@@ -199,6 +199,8 @@ TEST(Parser, METHOD(parse, some_math))
    Instruction{OpCode::EQUAL},
    Instruction{OpCode::NOT},
    Instruction{OpCode::POP},
+   Instruction{OpCode::NIL},
+   Instruction{OpCode::END},
   };
 
   ASSERT_EQ(expected.size(), chunk.instruction_count());
