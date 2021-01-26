@@ -49,15 +49,15 @@ fi
 
 if [ $run -eq 1 ]; then
 	cmd=${build_dir}/SimpleScript
-  ${cmd} $@
+  ${cmd} $@ || exit $?
 fi
 
 if [ $run_tests -eq 1 ]; then
 	cmd=${build_dir}/SimpleScriptTest
 	if [ ! -z "$1" ]; then
-		${cmd} --gtest_filter="$1"
+		${cmd} --gtest_filter="$1" || exit $?
 	else
-		${cmd}
+		${cmd} || exit $?
 	fi
 fi
 

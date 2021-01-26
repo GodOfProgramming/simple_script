@@ -169,6 +169,8 @@ namespace ss
     CALL,
     /** @brief TODO */
     RETURN,
+    /** @brief TODO */
+    END,
   };
 
   struct Instruction
@@ -218,6 +220,7 @@ namespace ss
       SS_ENUM_TO_STR_CASE(OpCode, PUSH_SP)
       SS_ENUM_TO_STR_CASE(OpCode, CALL)
       SS_ENUM_TO_STR_CASE(OpCode, RETURN)
+      SS_ENUM_TO_STR_CASE(OpCode, END)
       default: {
         return "UNKNOWN";
       }
@@ -272,6 +275,7 @@ namespace ss
       CLASS,
       CONTINUE,
       ELSE,
+      END,
       FALSE,
       FOR,
       FN,
@@ -752,6 +756,7 @@ namespace ss
     void break_stmt();
     void continue_stmt();
     void return_stmt();
+    void end_stmt();
     void match_stmt();
     void load_stmt();
     void loadr_stmt();

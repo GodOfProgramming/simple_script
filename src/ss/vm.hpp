@@ -18,8 +18,8 @@ namespace ss
 
     auto repl(VMConfig cfg = VMConfig::basic) -> int;
 
-    void run_file(std::string filename);
-    void run_script(std::string src, std::filesystem::path path = std::filesystem::current_path());
+    auto run_file(std::string filename) -> Value;
+    auto run_script(std::string src, std::filesystem::path path = std::filesystem::current_path()) -> Value;
 
     void set_var(Value::StringType name, Value value) noexcept;
     auto get_var(Value::StringType name) noexcept -> Value;
@@ -34,7 +34,7 @@ namespace ss
 
     void run_line(std::string line);
     void compile(std::string filename, std::string&& src);
-    void execute();
+    auto execute() -> Value;
 
     void disassemble_chunk() noexcept;
     void disassemble_instruction(Instruction i, std::size_t offset) noexcept;

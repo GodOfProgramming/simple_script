@@ -393,7 +393,16 @@ namespace ss
         }
       }
       case 'e': {
-        return this->check_keyword(1, 3, "lse", Token::Type::ELSE);
+        switch (*(this->starting_char + 1)) {
+          case 'l': {
+            return this->check_keyword(2, 2, "se", Token::Type::ELSE);
+          }
+          case 'n': {
+            return this->check_keyword(2, 1, "d", Token::Type::END);
+          }
+          default:
+            return Token::Type::IDENTIFIER;
+        }
       }
       case 'f': {
         switch (*(this->starting_char + 1)) {
@@ -557,6 +566,8 @@ namespace ss
   void Parser::parse()
   {
     while (this->iter < tokens.end() && this->iter->type != Token::Type::END_OF_FILE) { this->declaration(); }
+    this->chunk.write_constant(Value{}, this->previous()->line);
+    this->emit_instruction(Instruction{OpCode::END});
   }
 
   auto Parser::previous() const -> TokenIterator
@@ -731,6 +742,7 @@ namespace ss
   void Parser::parse_precedence(Precedence precedence)
   {
     this->advance();
+    std::cout << "parsing precidence for " << *this->previous() << '\n';
     ParseFn prefix_rule = this->rule_for(this->previous()->type).prefix;
     if (prefix_rule == nullptr) {
       this->error(this->previous(), "expected an expression");
@@ -1096,6 +1108,10 @@ namespace ss
         this->advance();
         this->continue_stmt();
       } break;
+      case Token::Type::END: {
+        this->advance();
+        this->end_stmt();
+      } break;
       case Token::Type::FN: {
         this->advance();
         this->fn_stmt();
@@ -1373,6 +1389,17 @@ namespace ss
       this->emit_instruction(Instruction{OpCode::NIL});
     }
     this->emit_instruction(Instruction{OpCode::RETURN, this->locals_in_function});
+  }
+
+  void Parser::end_stmt()
+  {
+    if (this->check(Token::Type::SEMICOLON)) {
+      this->emit_instruction(Instruction{OpCode::NIL});
+    } else {
+      this->expression();
+    }
+    this->consume(Token::Type::SEMICOLON, "expected ';' after end");
+    this->emit_instruction(Instruction{OpCode::END});
   }
 
   void Parser::load_stmt()

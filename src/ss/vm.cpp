@@ -64,20 +64,20 @@ namespace ss
     return exit_code;
   }
 
-  void VM::run_file(std::string filename)
+  auto VM::run_file(std::string filename) -> Value
   {
     std::filesystem::path cwd = std::filesystem::current_path();
     std::stringstream ss;
     ss << cwd.string() << '/' << filename;
-    this->run_script(util::load_file_to_string(filename), ss.str());
+    return this->run_script(util::load_file_to_string(filename), ss.str());
   }
 
-  void VM::run_script(std::string src, std::filesystem::path path)
+  auto VM::run_script(std::string src, std::filesystem::path path) -> Value
   {
     this->chunk.prepare();
     this->compile(path.string(), std::move(src));
     this->ip = this->chunk.begin();
-    this->execute();
+    return this->execute();
   }
 
   void VM::run_line(std::string line)
@@ -96,7 +96,7 @@ namespace ss
     compiler.compile(std::move(src), this->chunk, filename);
   }
 
-  void VM::execute()
+  auto VM::execute() -> Value
   {
     if constexpr (DISASSEMBLE_CHUNK) {
       this->disassemble_chunk();
@@ -241,6 +241,7 @@ namespace ss
           this->chunk.push_stack(-this->chunk.pop_stack());
         } break;
         case OpCode::PRINT: {
+          std::cout << "PRINTING\n";
           config.write_line(this->chunk.pop_stack());
         } break;
         case OpCode::SWAP: {
@@ -325,15 +326,25 @@ namespace ss
           this->chunk.pop_stack_n(local_count + 1);
           this->chunk.push_stack(retval);
         } break;
+        case OpCode::END: {
+          if constexpr (PRINT_STACK) {
+            this->chunk.print_stack(this->config);
+          }
+          Value retval;
+          if (!this->chunk.stack_empty()) {
+            retval = this->chunk.pop_stack();
+          }
+          return retval;
+        } break;
         default: {
           RuntimeError::throw_err("invalid op code: ", static_cast<std::size_t>(this->ip->major_opcode));
         }
       }
       this->ip++;
     }
-    if constexpr (PRINT_STACK) {
-      this->chunk.print_stack(this->config);
-    }
+
+    // never gets here
+    return Value();
   }
 
   void VM::disassemble_chunk() noexcept
@@ -486,6 +497,7 @@ namespace ss
         this->config.write_line(std::hex, ' ', std::setw(4), i.modifying_bits);
         this->config.reset_ostream();
       })
+      SS_SIMPLE_PRINT_CASE(END)
       default: {
         this->config.write_line(i.major_opcode, ": ", i.modifying_bits);
       } break;
