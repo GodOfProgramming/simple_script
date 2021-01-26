@@ -293,15 +293,28 @@ namespace ss
         } break;
         case OpCode::CALL: {
           auto fn_val = this->chunk.peek_stack(this->ip->modifying_bits + 2);
-          if (!fn_val.is_type(Value::Type::Function)) {
-            RuntimeError::throw_err("tried calling non-function: ", fn_val);
+          switch (fn_val.type()) {
+            case Value::Type::Function: {
+              auto fn = fn_val.function();
+              if (this->ip->modifying_bits != fn->airity) {
+                RuntimeError::throw_err(
+                 "tried calling function with incorrect number of args, expected ",
+                 fn->airity,
+                 ", got ",
+                 this->ip->modifying_bits);
+              }
+              this->ip = this->chunk.index_code_mut(fn->instruction_ptr);
+            } break;
+            case Value::Type::Native: {
+              auto fn = fn_val.native();
+              std::vector<Value> args;
+              for (std::size_t i = 0; i < fn->airity; i++) { args.push_back(std::move(this->chunk.pop_stack())); }
+              this->chunk.push_stack(fn->call(std::move(args)));
+            } break;
+            default: {
+              RuntimeError::throw_err("tried calling non-function: ", fn_val);
+            }
           }
-          auto fn = fn_val.function();
-          if (this->ip->modifying_bits != fn->airity) {
-            RuntimeError::throw_err(
-             "tried calling function with incorrect number of args, expected ", fn->airity, ", got ", this->ip->modifying_bits);
-          }
-          this->ip = this->chunk.index_code_mut(fn->instruction_ptr);
         } break;
         case OpCode::RETURN: {
           auto local_count = this->ip->modifying_bits;

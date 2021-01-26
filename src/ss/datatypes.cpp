@@ -34,6 +34,10 @@ namespace ss
    : value(v)
   {}
 
+  Value::Value(NativeFunctionType v)
+   : value(v)
+  {}
+
   Value::Value(AddressType v)
    : value(v)
   {}
@@ -69,6 +73,15 @@ namespace ss
   {
     if (this->is_type(Type::Function)) {
       return std::get<FunctionType>(this->value);
+    } else {
+      return nullptr;
+    }
+  }
+
+  auto Value::native() const -> NativeFunctionType
+  {
+    if (this->is_type(Type::Native)) {
+      return std::get<NativeFunctionType>(this->value);
     } else {
       return nullptr;
     }
@@ -356,6 +369,12 @@ namespace ss
     return *this;
   }
 
+  auto Value::operator=(NativeFunctionType v) noexcept -> Value&
+  {
+    this->value = v;
+    return *this;
+  }
+
   auto Value::operator==(const Value& other) const noexcept -> bool
   {
     return this->value == other.value;
@@ -401,14 +420,17 @@ namespace ss
     return ostream << value.to_string();
   }
 
-  Function::Function(std::string&& n, std::size_t a) noexcept
+  Function::Function(std::string n, std::size_t a, std::size_t ip) noexcept
    : name(n)
    , airity(a)
+   , instruction_ptr(ip)
   {}
 
   auto Function::to_string() const noexcept -> std::string
   {
-    return this->name;
+    std::stringstream ss;
+    ss << "<fn " << this->name << '>';
+    return ss.str();
   }
 
   auto operator<<(std::ostream& ostream, const Function& fn) -> std::ostream&
@@ -416,28 +438,15 @@ namespace ss
     return ostream << fn.to_string();
   }
 
-  ScriptFunction::ScriptFunction(std::string name, std::size_t airity, std::size_t ip)
-   : Function(std::move(name), airity)
-   , instruction_ptr(ip)
+  NativeFunction::NativeFunction(std::string n, std::size_t a, Function f)
+   : name(n)
+   , airity(a)
+   , function(f)
   {}
-
-  auto ScriptFunction::call(std::vector<Value>&& args) -> Value
-  {
-    (void)args;
-    return Value();
-  }
-
-  auto ScriptFunction::to_string() const noexcept -> std::string
-  {
-    std::stringstream ss;
-    ss << "<fn " << this->name << '>';
-    return ss.str();
-  }
 
   auto NativeFunction::call(std::vector<Value>&& args) -> Value
   {
-    (void)args;
-    return Value();
+    return function(std::move(args));
   }
 
   auto NativeFunction::to_string() const noexcept -> std::string

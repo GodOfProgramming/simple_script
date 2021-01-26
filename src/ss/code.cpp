@@ -44,13 +44,13 @@ namespace ss
 
   void BytecodeChunk::write(Instruction i, std::size_t line) noexcept
   {
-    this->code.push_back(i);
+    this->code.push_back(std::move(i));
     this->add_line(line);
   }
 
   void BytecodeChunk::write_constant(Value v, std::size_t line) noexcept
   {
-    this->constants.push_back(v);
+    this->constants.push_back(std::move(v));
     Instruction i{
      OpCode::CONSTANT,
      this->constants.size() - 1,
@@ -60,7 +60,7 @@ namespace ss
 
   auto BytecodeChunk::insert_constant(Value v) noexcept -> std::size_t
   {
-    this->constants.push_back(v);
+    this->constants.push_back(std::move(v));
     return this->constants.size() - 1;
   }
 
@@ -71,7 +71,7 @@ namespace ss
 
   void BytecodeChunk::push_stack(Value v) noexcept
   {
-    this->stack.push_back(v);
+    this->stack.push_back(std::move(v));
   }
 
   auto BytecodeChunk::pop_stack() noexcept -> Value
@@ -307,10 +307,10 @@ namespace ss
         } break;
       }
 
-      tokens.push_back(token);
+      tokens.push_back(std::move(token));
     }
 
-    tokens.push_back(this->make_token(Token::Type::END_OF_FILE));
+    tokens.push_back(std::move(this->make_token(Token::Type::END_OF_FILE)));
 
     return tokens;
   }
@@ -841,7 +841,7 @@ namespace ss
     });
 
     this->patch_jump(end_jmp);
-    this->emit_constant(Value{std::make_shared<ScriptFunction>(name, airity, end_jmp)});
+    this->emit_constant(Value{std::make_shared<Function>(name, airity, end_jmp)});
   }
 
   void Parser::named_variable(TokenIterator name, bool can_assign)

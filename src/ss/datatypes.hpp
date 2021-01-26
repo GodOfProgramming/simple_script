@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <variant>
@@ -8,7 +9,6 @@
 namespace ss
 {
   class Function;
-  class ScriptFunction;
   class NativeFunction;
 
   class Value
@@ -21,6 +21,7 @@ namespace ss
       Number,
       String,
       Function,
+      Native,
       Address,
     };
 
@@ -57,10 +58,11 @@ namespace ss
       }
     };
 
-    using BoolType     = bool;
-    using NumberType   = double;
-    using StringType   = std::string;
-    using FunctionType = std::shared_ptr<ScriptFunction>;
+    using BoolType           = bool;
+    using NumberType         = double;
+    using StringType         = std::string;
+    using FunctionType       = std::shared_ptr<Function>;
+    using NativeFunctionType = std::shared_ptr<NativeFunction>;
 
     struct AddressType
     {
@@ -85,6 +87,7 @@ namespace ss
     Value(StringType v);
     Value(const char* v);
     Value(FunctionType v);
+    Value(NativeFunctionType v);
     Value(AddressType v);
 
     auto type() const noexcept -> Type;
@@ -94,6 +97,7 @@ namespace ss
     auto number() const -> NumberType;
     auto string() const -> StringType;
     auto function() const -> FunctionType;
+    auto native() const -> NativeFunctionType;
     auto address() const -> AddressType;
 
     auto truthy() const -> bool;
@@ -113,7 +117,8 @@ namespace ss
     auto operator=(NumberType v) noexcept -> Value&;
     auto operator=(StringType v) noexcept -> Value&;
     auto operator=(const char* v) noexcept -> Value&;
-    auto operator=(FunctionType) noexcept -> Value&;
+    auto operator=(FunctionType v) noexcept -> Value&;
+    auto operator=(NativeFunctionType v) noexcept -> Value&;
 
     auto operator==(const Value& other) const noexcept -> bool;
     auto operator!=(const Value& other) const noexcept -> bool;
@@ -125,7 +130,7 @@ namespace ss
     static NilType nil;
 
    private:
-    std::variant<NilType, BoolType, NumberType, StringType, FunctionType, AddressType> value;
+    std::variant<NilType, BoolType, NumberType, StringType, FunctionType, NativeFunctionType, AddressType> value;
   };
 
   auto operator<<(std::ostream& ostream, const Value& value) -> std::ostream&;
@@ -133,41 +138,33 @@ namespace ss
   class Function
   {
    public:
-    virtual ~Function() = default;
+    Function(std::string name, std::size_t airity, std::size_t ip) noexcept;
+    ~Function() = default;
 
-    virtual auto call(std::vector<Value>&& args) -> Value = 0;
-
-    virtual auto to_string() const noexcept -> std::string = 0;
+    auto to_string() const noexcept -> std::string;
 
     const std::string name;
     const std::size_t airity;
-
-   protected:
-    Function(std::string&& name, std::size_t airity) noexcept;
+    const std::size_t instruction_ptr;
   };
 
   auto operator<<(std::ostream& ostream, const Function& fn) -> std::ostream&;
 
-  class ScriptFunction: public Function
+  class NativeFunction
   {
    public:
-    ScriptFunction(std::string name, std::size_t airity, std::size_t ip);
-    ~ScriptFunction() override = default;
+    using Args     = std::vector<Value>;
+    using Function = std::function<Value(Args&&)>;
 
-    auto call(std::vector<Value>&& args) -> Value override;
+    NativeFunction(std::string name, std::size_t airity, Function function);
+    ~NativeFunction() = default;
 
-    auto to_string() const noexcept -> std::string override;
+    auto call(std::vector<Value>&& args) -> Value;
 
-    const std::size_t instruction_ptr;
-  };
+    auto to_string() const noexcept -> std::string;
 
-  class NativeFunction: public Function
-  {
-   public:
-    ~NativeFunction() override = default;
-
-    virtual auto call(std::vector<Value>&& args) -> Value;
-
-    virtual auto to_string() const noexcept -> std::string;
+    const std::string name;
+    const std::size_t airity;
+    const Function function;
   };
 }  // namespace ss

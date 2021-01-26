@@ -6,6 +6,7 @@
 
 #define TEST_SCRIPT(src) #src
 
+using ss::NativeFunction;
 using ss::Value;
 using ss::VM;
 using ss::VMConfig;
@@ -163,4 +164,18 @@ TEST_F(TestVM, fn)
   this->vm->run_script(script);
 
   EXPECT_EQ(this->ostream->str(), "-4\n");
+}
+
+TEST_F(TestVM, native)
+{
+  const char* script = {
+#include "scripts/native_script.ss"
+  };
+
+  std::string name = "test";
+  this->vm->set_var(
+   name, Value(std::make_shared<NativeFunction>(name, 0, [](NativeFunction::Args&&) { return Value("test"); })));
+  this->vm->run_script(script);
+
+  EXPECT_EQ(this->ostream->str(), "test\n");
 }
