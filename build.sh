@@ -1,34 +1,49 @@
 #!/usr/bin/env bash
 
+EXE='SimpleScript'
+EXE_TEST='SimpleScriptTest'
+
+setup=0
+clean=0
 build=0
-run=0
+slow_build=0
 run_tests=0
 gen_coverage=0
+run=0
 
 proj_root="$(dirname "$0")"
 build_dir="${proj_root}/build"
 
-while getopts 'habrtg' flag; do
+while getopts 'hicbstgra' flag; do
 	case "$flag" in
 		h)
 			echo 'build.sh [flags]'
 			exit 0
 			;;
-		a)
-			build=1
-			run_tests=1
-			gen_coverage=1
-			;;
+    i)
+      setup=1
+      ;;
+    c)
+      clean=1
+      ;;
 		b)
 			build=1
 			;;
-    r)
-      run=1
-      ;;
+		s)
+			slow_build=1
+			;;
 		t)
 			run_tests=1
 			;;
 		g)
+			gen_coverage=1
+			;;
+    r)
+      run=1
+      ;;
+		a)
+			build=1
+			run_tests=1
 			gen_coverage=1
 			;;
 		*)
@@ -40,20 +55,30 @@ done
 
 shift $((OPTIND-1))
 
-if [ $build -eq 1 ]; then
+if [ $setup -eq 1 ]; then
+  git submodule update --init --recursive
+fi
+
+if [ $clean -eq 1 ]; then
 	cur_dir=$(pwd)
 	cd "${build_dir}"
-	make -j$(($(nproc) - 1)) || exit $?
+	make -j$(($(nproc) - 1)) clean || exit $?
 	cd "${cur_dir}"
 fi
 
-if [ $run -eq 1 ]; then
-	cmd=${build_dir}/SimpleScript
-  ${cmd} $@ || exit $?
+if [ $build -eq 1 ]; then
+	cur_dir=$(pwd)
+	cd "${build_dir}"
+	if [ $slow_build -eq 0 ]; then
+		make -j$(($(nproc) - 1)) || exit $?
+	else
+		make || exit $?
+	fi
+	cd "${cur_dir}"
 fi
 
 if [ $run_tests -eq 1 ]; then
-	cmd=${build_dir}/SimpleScriptTest
+	cmd="${build_dir}/${EXE_TEST}"
 	if [ ! -z "$1" ]; then
 		${cmd} --gtest_filter="$1" || exit $?
 	else
@@ -66,4 +91,9 @@ if [ $gen_coverage -eq 1 ]; then
 	cd "${build_dir}"
 	gcovr -r ../. --html --html-details -o coverage.html || exit $?
 	cd "${cur_dir}"
+fi
+
+if [ $run -eq 1 ]; then
+	cmd="${build_dir}/${EXE}"
+  ${cmd} $@ || exit $?
 fi

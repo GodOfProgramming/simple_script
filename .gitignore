@@ -48,6 +48,7 @@ _deps
 SimpleScript
 SimpleScriptTest
 coverage.*
+*.cmake
 
 # Vim
 *.swp
@@ -57,3 +58,5 @@ coverage.*
 
 # VSCode extensions
 *.vsix
+
+*.pc
