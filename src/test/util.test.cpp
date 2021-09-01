@@ -1,10 +1,17 @@
-#include "helpers.hpp"
 #include "ss/util.hpp"
+
+#include "helpers.hpp"
+
 #include <gtest/gtest.h>
 
-TEST(and_with, works)
+class TestUtil: public testing::Test
+{};
+
+TEST_F(TestUtil, stream_copies_to_string)
 {
-  EXPECT_TRUE(ss::and_width(true));
-  EXPECT_TRUE(ss::and_width(true, true, true, true));
-  EXPECT_FALSE(ss::and_width(true, true, false, true));
+  std::string data = "some data";
+  std::stringstream ss;
+  ss << data;
+  auto out = ss::util::stream_to_string(ss);
+  EXPECT_EQ(data, out);
 }

@@ -5,6 +5,7 @@
 
 #include <cstring>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <sstream>
 
@@ -1435,7 +1436,8 @@ namespace ss
       ss << line << '/' << file;
       std::string path = ss.str();
       if (std::filesystem::exists(path)) {
-        auto contents = util::load_file_to_string(path);
+        std::ifstream ifs(path);
+        auto contents = util::stream_to_string(ifs);
 
         Compiler compiler;
         compiler.compile(std::move(contents), this->chunk, path);
@@ -1465,7 +1467,8 @@ namespace ss
       this->error(this->previous(), "unable to load file");
     }
 
-    auto contents = util::load_file_to_string(path.string());
+    std::ifstream ifs(path.string());
+    auto contents = util::stream_to_string(ifs);
 
     Compiler compiler;
     compiler.compile(std::move(contents), this->chunk, path.string());

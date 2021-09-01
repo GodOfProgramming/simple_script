@@ -5,7 +5,7 @@
 
 namespace ss
 {
-  constexpr bool DISASSEMBLE_CHUNK        = false;
+  constexpr bool DISASSEMBLE_CHUNK        = true;
   constexpr bool DISASSEMBLE_INSTRUCTIONS = false;
   constexpr bool PRINT_STACK              = false;
   constexpr bool PRINT_CONSTANTS          = false;

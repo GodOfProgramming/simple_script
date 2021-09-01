@@ -1,7 +1,3 @@
-target_sources(${EXE_TEST} PRIVATE
-  cfg.test.cpp
-  code.test.cpp
-  datatypes.test.cpp
-  exceptions.test.cpp
-  vm.test.cpp
-)
+file(GLOB SRC_FILES "./*.cpp")
+
+target_sources(${PROJECT_NAME_TEST} PRIVATE ${SRC_FILES})

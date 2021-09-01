@@ -69,7 +69,8 @@ namespace ss
     std::filesystem::path cwd = std::filesystem::current_path();
     std::stringstream ss;
     ss << cwd.string() << '/' << filename;
-    return this->run_script(util::load_file_to_string(filename), ss.str());
+    std::ifstream ifs(filename);
+    return this->run_script(util::stream_to_string(ifs), ss.str());
   }
 
   auto VM::run_script(std::string src, std::filesystem::path path) -> Value

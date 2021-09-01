@@ -12,19 +12,15 @@ set(SHARED_COMPILE_OPTS -Wall -Wextra -pedantic -Werror)
 
 # configure variables
 
-set(EXE SimpleScript)
+set(PROJECT_NAME_TEST "${PROJECT_NAME}Test")
 
-set(EXE_TEST SimpleScriptTest)
+add_executable(${PROJECT_NAME} "src/main.cpp")
 
-set(SRC src)
+add_executable(${PROJECT_NAME_TEST} "src/main.test.cpp")
 
-add_executable(${EXE} "${SRC}/main.cpp")
+target_compile_options(${PROJECT_NAME} PUBLIC ${SHARED_COMPILE_OPTS} -O3)
 
-add_executable(${EXE_TEST} "${SRC}/main.test.cpp")
-
-target_compile_options(${EXE} PUBLIC ${SHARED_COMPILE_OPTS} -O3)
-
-target_compile_options(${EXE_TEST} PUBLIC ${SHARED_COMPILE_OPTS} -g -O0 --coverage -fprofile-arcs -ftest-coverage)
+target_compile_options(${PROJECT_NAME_TEST} PUBLIC ${SHARED_COMPILE_OPTS} -g -O0 --coverage -fprofile-arcs -ftest-coverage)
 
 # add sources
 
@@ -32,18 +28,18 @@ add_subdirectory(lib)
 
 add_subdirectory(src)
 
-target_link_libraries(${EXE} pthread)
+target_link_libraries(${PROJECT_NAME} pthread)
 
-target_link_libraries(${EXE_TEST} gcov pthread)
+target_link_libraries(${PROJECT_NAME_TEST} gcov pthread)
 
 # ss
 
-target_include_directories(${EXE} PUBLIC "${PROJECT_BINARY_DIR}")
+target_include_directories(${PROJECT_NAME} PUBLIC "${PROJECT_BINARY_DIR}")
 
-target_include_directories(${EXE} PUBLIC "${CMAKE_SOURCE_DIR}/src")
+target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_SOURCE_DIR}/src")
 
 # test
 
-target_include_directories(${EXE_TEST} PUBLIC "${PROJECT_BINARY_DIR}")
+target_include_directories(${PROJECT_NAME_TEST} PUBLIC "${PROJECT_BINARY_DIR}")
 
-target_include_directories(${EXE_TEST} PUBLIC "${CMAKE_SOURCE_DIR}/src")
+target_include_directories(${PROJECT_NAME_TEST} PUBLIC "${CMAKE_SOURCE_DIR}/src")

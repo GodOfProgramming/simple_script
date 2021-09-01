@@ -1,12 +1,5 @@
-set(SHARED_SOURCES
-  cfg.cpp
-  vm.cpp
-  code.cpp
-  datatypes.cpp
-  exceptions.cpp
-  util.cpp
-)
+file(GLOB SRC_FILES "./*.cpp")
 
-target_sources(${EXE} PUBLIC ${SHARED_SOURCES})
+target_sources(${PROJECT_NAME} PRIVATE ${SRC_FILES})
 
-target_sources(${EXE_TEST} PUBLIC ${SHARED_SOURCES})
+target_sources(${PROJECT_NAME_TEST} PRIVATE ${SRC_FILES})
